@@ -1,0 +1,9 @@
+node_modules/
+/data/
+/old/
+/public/events.js
+/public/images/
+/media/
+/feeds.txt
+/profiles.ini
+/db.sqlite

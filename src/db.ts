@@ -1,0 +1,183 @@
+import { CreationOptional, Sequelize } from 'sequelize';
+import { DataTypes, Model, InferAttributes, InferCreationAttributes, Attributes, Optional } from 'sequelize';
+import { Config } from './prefs';
+import { SQLITE_PATH } from './util';
+
+const sequelize = new Sequelize({
+  dialect: 'sqlite',
+  storage: SQLITE_PATH,
+  logging: Config.Development,
+});
+
+export { sequelize };
+
+type MakeOptional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+
+type FeedType = MakeOptional<Attributes<Feed>, 'id'>; // Attributes<Feed>;
+
+// type FeedType = Omit<FeedFullType, 'id'> & Partial<Pick<FeedFullType, 'id'>>;
+
+class Feed extends Model<InferAttributes<Feed>, InferCreationAttributes<Feed>> {
+  declare id: CreationOptional<number>;
+  declare url: string;
+  declare name?: string|null;
+  declare description?: string|null;
+  declare icon?: string|null;
+  declare etag?: string|null;
+  declare lastModified?: Date|string|null;
+  declare type?: string|null;
+  // declare user_agent?: string|null;
+  declare css_name?: string|null;
+  declare css_description?: string|null;
+  declare css_entries?: string|null;
+  declare css_entry_link?: string|null;
+  declare css_entry_image?: string|null;
+  // declare css_entry_video?: string|null;
+  declare css_entry_title?: string|null;
+  declare css_entry_summary?: string|null;
+  // declare css_entry_content?: string|null;
+  declare css_entry_published?: string|null;
+}
+
+Feed.init(
+  {
+    id: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    url: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+      unique: true,
+    },
+    name: DataTypes.TEXT,
+    description: DataTypes.TEXT,
+    etag: DataTypes.TEXT,
+    lastModified: DataTypes.DATE,
+  },
+  { sequelize }
+);
+
+type EntryType = MakeOptional<Attributes<Entry>, 'id'>;
+
+class Entry extends Model<InferAttributes<Entry>, InferCreationAttributes<Entry>> {
+  declare id: CreationOptional<number>;
+  declare guid: string;
+  declare link?: string|null;
+  declare title?: string|null;
+  declare summary?: string|null;
+  declare content?: string|null;
+  declare html?: string|null;
+  // declare extContent?: string|null;
+  declare image?: string|null;
+  declare video?: string|null;
+  declare embed?: string|null;
+  declare published?: Date|string|null;
+  // declare present?: boolean|null;
+  declare feedId: number;
+}
+
+Entry.init(
+  {
+    id: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    guid: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+      unique: true,
+    },
+    link: DataTypes.TEXT,
+    title: DataTypes.TEXT,
+    summary: DataTypes.TEXT,
+    content: DataTypes.TEXT,
+    html: DataTypes.TEXT,
+    // extContent: DataTypes.TEXT,
+    image: DataTypes.TEXT,
+    video: DataTypes.TEXT,
+    published: {
+      type: DataTypes.DATE,
+      set(value: any) {
+        if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}T/)) {
+          this.setDataValue('published', new Date(value)); // auto-convert only if it's a valid ISO string
+        } else {
+          this.setDataValue('published', value); // leave it as-is
+        }
+      }
+    },
+    // present: DataTypes.BOOLEAN,
+    feedId: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: false,
+      references: {
+        model: Feed,
+        key: 'id',
+      },
+    },
+  },
+  { sequelize }
+);
+
+Feed.hasMany(Entry, { foreignKey: 'feedId' });
+Entry.belongsTo(Feed, { foreignKey: 'feedId' });
+
+// class Revision extends Model<InferAttributes<Revision>, InferCreationAttributes<Revision>> {
+//   declare id: CreationOptional<number>;
+//   declare guid: string;
+//   declare link?: string|null;
+//   declare title?: string|null;
+//   declare summary?: string|null;
+//   declare image?: string|null;
+//   declare video?: string|null;
+//   declare published?: Date|string|null;
+//   declare changed?: string[];
+//   declare entryId: number;
+// }
+
+// Revision.init(
+//   {
+//     id: {
+//       type: DataTypes.INTEGER.UNSIGNED,
+//       autoIncrement: true,
+//       primaryKey: true,
+//     },
+//     guid: {
+//       type: DataTypes.TEXT,
+//       allowNull: false,
+//       unique: true,
+//     },
+//     link: DataTypes.TEXT,
+//     title: DataTypes.TEXT,
+//     summary: DataTypes.TEXT,
+//     image: DataTypes.TEXT,
+//     video: DataTypes.TEXT,
+//     published: {
+//       type: DataTypes.DATE,
+//       set(value: any) {
+//         if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}T/)) {
+//           this.setDataValue('published', new Date(value)); // auto-convert only if it's a valid ISO string
+//         } else {
+//           this.setDataValue('published', value); // leave it as-is
+//         }
+//       }
+//     },
+//     changed: DataTypes.ARRAY(DataTypes.TEXT),
+//     entryId: {
+//       type: DataTypes.INTEGER.UNSIGNED,
+//       allowNull: false,
+//       references: {
+//         model: Entry,
+//         key: 'id',
+//       },
+//     },
+//   },
+//   { sequelize }
+// );
+
+// Entry.hasMany(Revision, { foreignKey: 'entryId' });
+// Revision.belongsTo(Entry, { foreignKey: 'entryId' });
+
+export { Feed, FeedType, Entry, EntryType };

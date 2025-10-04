@@ -1,0 +1,147 @@
+{%- set section -%}{%- block section -%}{%- endblock -%}{%- endset -%}
+{%- set section -%}
+  {%- if section -%}
+    {{- section -}}
+  {%- else -%}
+    {{- Config.AppName -}}
+  {%- endif -%}
+{%- endset -%}
+{%- set title -%}{%- block title -%}{%- endblock -%}{%- endset -%}
+{%- set title -%}
+  {%- if title -%}
+    {{ title }} | {{ Config.AppName }}
+  {%- else -%}
+    {{- Config.AppName -}}
+  {%- endif -%}
+{%- endset -%}
+{%- set menuitems -%}{%- block menuitems -%}{%- endblock -%}{%- endset -%}
+{# { % set menuitems %}{% if menuitems %}{{ menuitems }}{% else %}--{% endif %}{% endset % } #}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="description" content="{{ Config.AppName }} RSS Reader" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0" />
+  <title>{{ title }}</title>
+
+  <!-- Add to homescreen for Chrome on Android -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  <link rel="icon" sizes="192x192" href="/images/android-desktop.png" />
+
+  <!-- Add to homescreen for Safari on iOS -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <meta name="apple-mobile-web-app-title" content="{{ Config.AppName }}" />
+  <link rel="apple-touch-icon-precomposed" href="/images/ios-desktop.png" />
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:regular,bold,italic,thin,light,bolditalic,black,medium&lang=en" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+  <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.cyan-light_blue.min.css" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body class="{% block classes %}{% endblock %}">
+  <div class="mdl-layout__container">
+  <div class="demo-blog demo-blog--blogpost demo-layout mdl-layout mdl-js-layout mdl-layout--fixed-drawer mdl-layout--fixed-header">
+    <header class="demo-header mdl-layout__header mdl-color--grey-100 mdl-color-text--grey-600">
+      <div class="mdl-layout__header-row">
+        <span class="mdl-layout-title">{{ section }}</span>
+        <div class="header-extra">
+          <div id="load-spinner" class="mdl-spinner mdl-spinner--single-color mdl-js-spinner is-active" hidden></div>
+          <button id="reload-button" class="mdl-button mdl-js-button mdl-button--primary" onclick="location.reload();" hidden>
+            Refresh
+          </button>
+        </div>
+        <div class="mdl-layout-spacer"></div>
+        {% if not entry %}
+          <div class="mdl-textfield mdl-js-textfield mdl-textfield--expandable">
+            <form>
+              <button class="mdl-button mdl-js-button mdl-button--icon" for="search" type="submit">
+                <i class="material-icons">search</i>
+              </button>
+              <div class="mdl-textfield__expandable-holder">
+                <input class="mdl-textfield__input" type="text" id="search-entries" name="search" style="border-width: 0;" value="{{ search }}" required />
+                <label class="mdl-textfield__label" for="search-entries">Search Entries...</label>
+              </div>
+            </form>
+          </div>
+        {% endif %}
+        {% if menuitems | trim %}
+          <button class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--icon" id="hdrbtn">
+            <i class="material-icons">more_vert</i>
+          </button>
+          <ul class="mdl-menu mdl-js-menu mdl-js-ripple-effect mdl-menu--bottom-right" for="hdrbtn">
+            {{ menuitems | safe }}
+            <!-- <li class="mdl-menu__item">Refresh All</li>
+            <li class="mdl-menu__item">Manage Feeds</li>
+            <li class="mdl-menu__item">Settings</li> -->
+          </ul>
+        {% endif %}
+      </div>
+    </header>
+    <div class="demo-drawer mdl-layout__drawer mdl-color--blue-grey-900 mdl-color-text--blue-grey-50">
+      {# <header class="demo-drawer-header">
+        <img src="/images/user.jpg" class="demo-avatar">
+        <div class="demo-avatar-dropdown">
+          <span>reader@example.com</span>
+          <div class="mdl-layout-spacer"></div>
+          <button id="accbtn" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--icon">
+            <i class="material-icons" role="presentation">arrow_drop_down</i>
+            <span class="visuallyhidden">Accounts</span>
+          </button>
+          <ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" for="accbtn">
+            <li class="mdl-menu__item">reader@example.com</li>
+            <li class="mdl-menu__item">Add another account...</li>
+          </ul>
+        </div>
+      </header> #}
+      <nav class="demo-navigation mdl-navigation mdl-color--blue-grey-800">
+        <a class="mdl-navigation__link" href="/"><i class="mdl-color-text--blue-grey-400 material-icons" role="presentation">home</i>All Feeds</a>
+        <hr />
+        <div style="padding: 0 16px;">
+          <div class="mdl-textfield mdl-js-textfield">
+            <input class="mdl-textfield__input" type="text" id="filter-feeds" />
+            <label class="mdl-textfield__label mdl-color-text--grey" for="filter-feeds">Filter Feeds...</label>
+          </div>
+        </div>
+        {# <a class="mdl-navigation__link" href=""><i class="mdl-color-text--blue-grey-400 material-icons" role="presentation">star</i>Favorites</a>
+        <a class="mdl-navigation__link" href=""><i class="mdl-color-text--blue-grey-400 material-icons" role="presentation">access_time</i>Recently Read</a> #}
+        {% for feedId, feed in feeds %}
+          <a class="feed-link mdl-navigation__link" href="{{ urlFor('/feed/:feed', { feed: slugifyUrl(feed.url) }) }}">
+            <i class="mdl-color-text--blue-grey-400 material-icons" role="presentation">
+              {%- if feed.icon -%}
+                <img src="{{ feed.icon }}" />
+              {%- else -%}
+                feed
+              {%- endif -%}
+              {# <img src="https://www.google.com/s2/favicons?domain={{ feed.url.split('/')[2] }}&sz=24" onload="this.parentElement.querySelector('span').remove();" onload="this.parentElement.textContent='feed';" /> #}
+            </i>
+            <span style="text-overflow: ellipsis; overflow: hidden;">
+              {{ feed.name }} {# {{ feed.name or feed.url }} #}
+              <br>
+              <span class="clamped-text" style="font-size: smaller; line-break: anywhere; line-clamp: 1; -webkit-line-clamp: 1;" title="{{ feed.url }}">{{ feed.url }}</span>
+            </span>
+          </a>
+        {% endfor %}
+        {# <div class="mdl-layout-spacer"></div>
+        <a class="mdl-navigation__link" href=""><i class="mdl-color-text--blue-grey-400 material-icons" role="presentation">add</i>Add Feed</a>
+        <a class="mdl-navigation__link" href=""><i class="mdl-color-text--blue-grey-400 material-icons" role="presentation">settings</i>Settings</a> #}
+      </nav>
+    </div>
+    <main class="mdl-layout__content mdl-color--grey-100">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  </div>
+
+  {# <script src="https://code.getmdl.io/1.3.0/material.min.js" defer></script> #}
+  <script src="/material.js" defer></script>
+  <script>
+    const filterFeeds = document.getElementById('filter-feeds');
+    filterFeeds.addEventListener('input', (ev) => {
+      const text = ev.target.value.toLowerCase();
+      Array.from(document.getElementsByClassName('feed-link')).forEach(el => el.hidden = el.innerText.toLowerCase().search(text) == -1);
+    });
+  </script>
+</body>
+</html>
