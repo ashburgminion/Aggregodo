@@ -2,12 +2,13 @@
   "compilerOptions": {
     "target": "ES2021",
     "module": "CommonJS",
-    // "rootDir": "src",
-    "rootDir": "./",
+    // "rootDirs": ["src", "public"],
+    "rootDir": "src",
     "outDir": "dist",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "allowJs": true,
-  }
+  },
+  "include": ["src/**/*"],
 }

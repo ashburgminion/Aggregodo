@@ -1,5 +1,5 @@
 import { CreationOptional, Sequelize } from 'sequelize';
-import { DataTypes, Model, InferAttributes, InferCreationAttributes, Attributes, Optional } from 'sequelize';
+import { DataTypes, Model, InferAttributes, InferCreationAttributes, Attributes } from 'sequelize';
 import { Config } from './prefs';
 import { SQLITE_PATH } from './util';
 
@@ -13,11 +13,9 @@ export { sequelize };
 
 type MakeOptional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
-type FeedType = MakeOptional<Attributes<Feed>, 'id'>; // Attributes<Feed>;
+export type FeedType = MakeOptional<Attributes<Feed>, 'id'>;
 
-// type FeedType = Omit<FeedFullType, 'id'> & Partial<Pick<FeedFullType, 'id'>>;
-
-class Feed extends Model<InferAttributes<Feed>, InferCreationAttributes<Feed>> {
+export class Feed extends Model<InferAttributes<Feed>, InferCreationAttributes<Feed>> {
   declare id: CreationOptional<number>;
   declare url: string;
   declare name?: string|null;
@@ -37,6 +35,7 @@ class Feed extends Model<InferAttributes<Feed>, InferCreationAttributes<Feed>> {
   declare css_entry_summary?: string|null;
   // declare css_entry_content?: string|null;
   declare css_entry_published?: string|null;
+  declare profile?: string|null;
 }
 
 Feed.init(
@@ -59,9 +58,9 @@ Feed.init(
   { sequelize }
 );
 
-type EntryType = MakeOptional<Attributes<Entry>, 'id'>;
+export type EntryType = MakeOptional<Attributes<Entry>, 'id'>;
 
-class Entry extends Model<InferAttributes<Entry>, InferCreationAttributes<Entry>> {
+export class Entry extends Model<InferAttributes<Entry>, InferCreationAttributes<Entry>> {
   declare id: CreationOptional<number>;
   declare guid: string;
   declare link?: string|null;
@@ -69,11 +68,11 @@ class Entry extends Model<InferAttributes<Entry>, InferCreationAttributes<Entry>
   declare summary?: string|null;
   declare content?: string|null;
   declare html?: string|null;
-  // declare extContent?: string|null;
   declare image?: string|null;
   declare video?: string|null;
   declare embed?: string|null;
   declare published?: Date|string|null;
+  declare relPublished?: string|null;
   // declare present?: boolean|null;
   declare feedId: number;
 }
@@ -95,7 +94,6 @@ Entry.init(
     summary: DataTypes.TEXT,
     content: DataTypes.TEXT,
     html: DataTypes.TEXT,
-    // extContent: DataTypes.TEXT,
     image: DataTypes.TEXT,
     video: DataTypes.TEXT,
     published: {
@@ -123,61 +121,3 @@ Entry.init(
 
 Feed.hasMany(Entry, { foreignKey: 'feedId' });
 Entry.belongsTo(Feed, { foreignKey: 'feedId' });
-
-// class Revision extends Model<InferAttributes<Revision>, InferCreationAttributes<Revision>> {
-//   declare id: CreationOptional<number>;
-//   declare guid: string;
-//   declare link?: string|null;
-//   declare title?: string|null;
-//   declare summary?: string|null;
-//   declare image?: string|null;
-//   declare video?: string|null;
-//   declare published?: Date|string|null;
-//   declare changed?: string[];
-//   declare entryId: number;
-// }
-
-// Revision.init(
-//   {
-//     id: {
-//       type: DataTypes.INTEGER.UNSIGNED,
-//       autoIncrement: true,
-//       primaryKey: true,
-//     },
-//     guid: {
-//       type: DataTypes.TEXT,
-//       allowNull: false,
-//       unique: true,
-//     },
-//     link: DataTypes.TEXT,
-//     title: DataTypes.TEXT,
-//     summary: DataTypes.TEXT,
-//     image: DataTypes.TEXT,
-//     video: DataTypes.TEXT,
-//     published: {
-//       type: DataTypes.DATE,
-//       set(value: any) {
-//         if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}T/)) {
-//           this.setDataValue('published', new Date(value)); // auto-convert only if it's a valid ISO string
-//         } else {
-//           this.setDataValue('published', value); // leave it as-is
-//         }
-//       }
-//     },
-//     changed: DataTypes.ARRAY(DataTypes.TEXT),
-//     entryId: {
-//       type: DataTypes.INTEGER.UNSIGNED,
-//       allowNull: false,
-//       references: {
-//         model: Entry,
-//         key: 'id',
-//       },
-//     },
-//   },
-//   { sequelize }
-// );
-
-// Entry.hasMany(Revision, { foreignKey: 'entryId' });
-// Revision.belongsTo(Entry, { foreignKey: 'entryId' });
-
-export { Feed, FeedType, Entry, EntryType };

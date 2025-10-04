@@ -1,4 +1,4 @@
-import { Feed, FeedType } from "./db";
+import { FeedType } from "./db";
 import { JSDOM } from 'jsdom';
 import { Nullable } from "./util";
 
@@ -7,7 +7,7 @@ type CssParsedQuery = {
   text: boolean;
   html: 'inner'|'outer'|null;
   attr: string|null;
-  ops: CssOperation[], // string[][],
+  ops: CssOperation[],
 };
 type CssOperation = [string, ...CssOperationArgs];
 type CssOperationArgs = (string|number)[];
@@ -16,8 +16,7 @@ export function parseHtmlFeed(html: string, feed: FeedType) {
   const doc = new JSDOM(html, { url: feed.url }).window.document;
   const items: any[] = [];
   if (feed.css_entries && feed.css_entry_link) {
-    // const query = parseCssQuery(feed.css_entries);
-    for (const el of doc.querySelectorAll(feed.css_entries /* query.query */)) {
+    for (const el of doc.querySelectorAll(feed.css_entries)) {
       const link = runCssQuery(el, feed.css_entry_link);
       const published = runCssQuery(el, feed.css_entry_published);
       const publishedInt = published && parseInt(published);
@@ -41,41 +40,30 @@ export function parseHtmlFeed(html: string, feed: FeedType) {
 }
 
 function parseCssQuery(raw: string): CssParsedQuery {
-  // const length = raw.length;
   const res: CssParsedQuery = { query: '', text: false, html: null, attr: null, ops: [] };
   let inString: string|false = false;
   let toSlice: string|null = null;
-  // for (let i=0; i<length; i++) {
   while (raw) {
-    const c = raw[0]; // raw[i];
+    const c = raw[0];
     if (!inString) {
       if (c === '"' || c === "'") {
         inString = c;
       } else if (raw.startsWith('::text')) {
         res.text = true;
         toSlice = '::text';
-        // return res;
       } else if (raw.startsWith('::inner-html')) {
         res.html = 'inner';
         toSlice = '::inner-html';
-        // return res;
       } else if (raw.startsWith('::outer-html')) {
         res.html = 'outer';
         toSlice = '::outer-html';
-        // return res;
       } else if (raw.startsWith('::attr(')) {
         res.attr = raw.split('(')[1].split(')')[0];
         toSlice = '::attr()' + res.attr;
-        // return res;
       } else if (raw.startsWith('/@append(')) {
         const name = raw.split('@')[1].split('(')[0];
         const inner = raw.split('(')[1].split(')')[0];
-        // const args = inner.split(',');
         const pargs: CssOperationArgs = [];
-        // for (let i=0; i<args.length; i++) {
-          // args[i] = JSON.parse(args[i]);
-          // pargs.push(JSON.parse(args[i].replace().replace()));
-        // }
         for (let raw of inner.split(',')) {
           raw = raw.trim();
           if (/^'(.*)'$/.test(raw)) {
@@ -97,7 +85,6 @@ function parseCssQuery(raw: string): CssParsedQuery {
     raw = raw.slice(toSlice ? toSlice.length : 1);
     toSlice = null;
   }
-  // res.text = true;
   return res;
 }
 
@@ -107,7 +94,6 @@ function runCssQuery(node: Element|Document, query: Nullable<CssParsedQuery|stri
     query = parseCssQuery(query);
   }
   if (query) {
-    // const el = node.querySelector(query.query);
     const el = !query.query && node instanceof Element ? node : node.querySelector(query.query);
     if (el) {
       if (query.text) {
@@ -135,6 +121,17 @@ function runCssQuery(node: Element|Document, query: Nullable<CssParsedQuery|stri
   return val;
 }
 
-// function getWhitespaced(raw: string, ...values: string[]) {
-
+// function getWhitespaced(raw: string, ...values: string[]): number|null {
+//   let count = 0;
+//   for (const value of values) {
+//     const sub = raw.trim();
+//     count += raw.length - sub.length;
+//     if (sub.startsWith(value)) {
+//       raw = sub.slice(value.length);
+//       count += value.length;
+//     } else {
+//       return null;
+//     }
+//   }
+//   return count;
 // }

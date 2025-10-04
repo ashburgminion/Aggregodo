@@ -1,0 +1,31 @@
+{%- set feedLink -%}
+  {%- if feed -%}
+    {{- getLinksPrefix(req) -}}{{- urlFor('/feed/:feed', { feed: slugifyUrl(feed.url) }) -}}
+  {%- else -%}
+    {{- getLinksPrefix(req) -}}
+  {%- endif -%}
+{%- endset -%}
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>{% if feed %}{{ feed.name }} | {% endif %}Feed | {{ Config.AppName }}</title>
+  <id>{{ feedLink }}</id>
+  <link rel="alternate" type="text/html" href="{{ feedLink }}" />
+  <link rel="self" type="application/atom+xml" href="{{ feedLink }}/atom" />
+  {%- for entry in entries -%}
+    {%- set entryLink -%}
+      {{- getLinksPrefix(req) -}}{{- urlFor('/entry/:entry', { entry: slugifyUrl(entry.link) }) -}}
+    {%- endset -%}
+    <entry>
+      <id>{{ entryLink }}</id>
+      <link type="text/html" href="{{ entryLink }}" />
+      <title>{{ entry.title }}</title>
+      <published>{{ entry.published }}</published>
+      <summary>{{ entry.summary }}</summary>
+      <content type="html">
+        <![CDATA[
+          {{ entry.content | safe }}
+        ]]>
+      </content>
+    </entry>
+  {%- endfor -%}
+</feed>

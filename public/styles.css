@@ -107,117 +107,6 @@ html, body {
   width: 24px;
 }
 
-.demo-content {
-  max-width: 1080px;
-}
-
-.demo-charts {
-  -webkit-align-items: center;
-       -ms-flex-align: center;
-          align-items: center;
-}
-.demo-chart:nth-child(1) {
-  color: #ACEC00;
-}
-.demo-chart:nth-child(2) {
-  color: #00BBD6;
-}
-.demo-chart:nth-child(3) {
-  color: #BA65C9;
-}
-.demo-chart:nth-child(4) {
-  color: #EF3C79;
-}
-.demo-graphs {
-  padding: 16px 32px;
-  display: -webkit-flex;
-  display: -ms-flexbox;
-  display: flex;
-  -webkit-flex-direction: column;
-      -ms-flex-direction: column;
-          flex-direction: column;
-  -webkit-align-items: stretch;
-       -ms-flex-align: stretch;
-          align-items: stretch;
-}
-/* TODO: Find a proper solution to have the graphs
- * not float around outside their container in IE10/11.
- * Using a browserhacks.com solution for now.
- */
-_:-ms-input-placeholder, :root .demo-graphs {
-  min-height: 664px;
-}
-_:-ms-input-placeholder, :root .demo-graph {
-  max-height: 300px;
-}
-/* TODO end */
-.demo-graph:nth-child(1) {
-  color: #00b9d8;
-}
-.demo-graph:nth-child(2) {
-  color: #d9006e;
-}
-
-.demo-cards {
-  -webkit-align-items: flex-start;
-       -ms-flex-align: start;
-          align-items: flex-start;
-  -webkit-align-content: flex-start;
-     -ms-flex-line-pack: start;
-          align-content: flex-start;
-}
-.demo-cards .demo-separator {
-  height: 32px;
-}
-.demo-cards .mdl-card__title.mdl-card__title {
-  color: white;
-  font-size: 24px;
-  font-weight: 400;
-}
-.demo-cards ul {
-  padding: 0;
-}
-.demo-cards h3 {
-  font-size: 1em;
-}
-.demo-updates .mdl-card__title {
-  min-height: 200px;
-  background-image: url('images/dog.png');
-  background-position: 90% 100%;
-  background-repeat: no-repeat;
-}
-.demo-cards .mdl-card__actions a {
-  color: #00BCD4;
-  text-decoration: none;
-}
-
-.demo-options h3 {
-  margin: 0;
-}
-.demo-options .mdl-checkbox__box-outline {
-  border-color: rgba(255, 255, 255, 0.89);
-}
-.demo-options ul {
-  margin: 0;
-  list-style-type: none;
-}
-.demo-options li {
-  margin: 4px 0;
-}
-.demo-options .material-icons {
-  color: rgba(255, 255, 255, 0.89);
-}
-.demo-options .mdl-card__actions {
-  height: 64px;
-  display: -webkit-flex;
-  display: -ms-flexbox;
-  display: flex;
-  box-sizing: border-box;
-  -webkit-align-items: center;
-       -ms-flex-align: center;
-          align-items: center;
-}
-
 .demo-blog .demo-blog__posts {
   max-width: 900px;
   padding: 0;
@@ -227,7 +116,7 @@ _:-ms-input-placeholder, :root .demo-graph {
   width: 100%;
   margin: 0 auto;
   -webkit-flex-shrink: 0;
-      -ms-flex-negative: 0;
+    -ms-flex-negative: 0;
           flex-shrink: 0;
 }
 
@@ -251,7 +140,7 @@ _:-ms-input-placeholder, :root .demo-graph {
 .demo-blog .mdl-card__title {
   padding: 16px;
   -webkit-flex-grow: 1;
-      -ms-flex-positive: 1;
+  -ms-flex-positive: 1;
           flex-grow: 1;
 }
 .demo-blog .mdl-card__media {
@@ -321,7 +210,7 @@ _:-ms-input-placeholder, :root .demo-graph {
           justify-content: flex-start;
   height: auto;
 }
-.demo-blog .meta > .meta__favorites{
+.demo-blog .meta > .meta__favorites {
   -webkit-flex-direction: row;
       -ms-flex-direction: row;
           flex-direction: row;
@@ -350,62 +239,7 @@ _:-ms-input-placeholder, :root .demo-graph {
       -ms-flex-direction: column;
           flex-direction: column;
 }
-.demo-blog.is-small-screen .demo-blog__posts > .mdl-card.coffee-pic {
-  -webkit-order: 0;
-      -ms-flex-order: 0;
-          order: 0;
-}
-.demo-blog.is-small-screen .demo-blog__posts > .mdl-card.something-else {
-  -webkit-order: -1;
-      -ms-flex-order: -1;
-          order: -1;
-}
-.demo-blog .coffee-pic .mdl-card__media {
-  background-image: url('images/coffee.jpg');
-}
-.demo-blog .something-else .mdl-card__media {
-  display: -webkit-flex;
-  display: -ms-flexbox;
-  display: flex;
-  -webkit-flex-direction: column;
-      -ms-flex-direction: column;
-          flex-direction: column;
-  -webkit-justify-content: center;
-            -ms-flex-pack: center;
-          justify-content: center;
-  -webkit-align-items: center;
-       -ms-flex-align: center;
-          align-items: center;
-}
-.demo-blog .something-else > button {
-  position: absolute;
-  top: 0;
-  right: 28px;
-  -webkit-transform: translate(0px, -28px);
-          transform: translate(0px, -28px);
-}
-.demo-blog .something-else .mdl-card__media {
-  font-size: 13px;
-  font-weight: 500;
-  border-top-left-radius: 2px;
-  border-top-right-radius: 2px;
-}
-.demo-blog .something-else .mdl-card__media img {
-  width: 64px;
-  height: 64px;
-  margin-bottom: 10px;
-}
-.demo-blog .something-else .mdl-card__supporting-text {
-  background-color: #F5F5F5;
-  border-bottom-left-radius: 2px;
-  border-bottom-right-radius: 2px;
-}
-/* .demo-blog .on-the-road-again .mdl-card__media {
-  background-image: url('images/road.jpg');
-}
-.demo-blog .shopping .mdl-card__media {
-  background-image: url('images/shopping.jpg');
-} */
+
 /* .demo-blog .demo-blog__posts >  */
 .demo-nav {
   margin: 12px 15px;
@@ -628,10 +462,6 @@ _:-ms-input-placeholder, :root .demo-graph {
   -ms-flex-positive: 1;
           flex-grow: 1;
 }
-.demo-blog .something-else {
-  overflow: visible;
-  z-index: 10;
-}
 .demo-blog .amazing .mdl-card__title {
   background-color: #263238;
 }
@@ -709,13 +539,6 @@ _:-ms-input-placeholder, :root .demo-graph {
   justify-content: flex-end;
   /* margin-bottom: 16px;
   padding: 16px 16px 8px 16px; */
-}
-
-/* Grid Layout */
-.rss-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px;
 }
 
 .rss-card,
@@ -880,8 +703,8 @@ _:-ms-input-placeholder, :root .demo-graph {
   user-select: none;
 }
 
-#grid-layout,
-#list-layout {
+body.list-layout #grid-layout,
+body.grid-layout #list-layout {
   display: none !important;
 }
 

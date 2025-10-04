@@ -1,9 +1,7 @@
 node_modules/
+/dist/
 /data/
 /old/
-/public/events.js
+/src/events.ts
+/src/events.js.old
 /public/images/
-/media/
-/feeds.txt
-/profiles.ini
-/db.sqlite
