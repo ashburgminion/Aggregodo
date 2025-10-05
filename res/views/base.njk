@@ -54,7 +54,7 @@
         </div>
         <div class="mdl-layout-spacer"></div>
         {% if not entry %}
-          <div class="mdl-textfield mdl-js-textfield mdl-textfield--expandable">
+          <div class="mdl-textfield mdl-js-textfield mdl-textfield--expandable mdl-textfield--floating-label">
             <form>
               <button class="mdl-button mdl-js-button mdl-button--icon" for="search" type="submit">
                 <i class="material-icons">search</i>
@@ -96,30 +96,32 @@
       <nav class="demo-navigation mdl-navigation mdl-color--blue-grey-800">
         <a class="mdl-navigation__link" href="/"><i class="mdl-color-text--blue-grey-400 material-icons" role="presentation">home</i>All Feeds</a>
         <hr />
-        <div style="padding: 0 16px;">
-          <div class="mdl-textfield mdl-js-textfield">
-            <input class="mdl-textfield__input" type="text" id="filter-feeds" />
-            <label class="mdl-textfield__label mdl-color-text--grey" for="filter-feeds">Filter Feeds...</label>
+        {% if feeds %}
+          <div style="padding: 0 16px;">
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+              <input class="mdl-textfield__input" type="text" id="filter-feeds" />
+              <label class="mdl-textfield__label mdl-color-text--grey" for="filter-feeds">Filter Feeds...</label>
+            </div>
           </div>
-        </div>
-        {# <a class="mdl-navigation__link" href=""><i class="mdl-color-text--blue-grey-400 material-icons" role="presentation">star</i>Favorites</a>
-        <a class="mdl-navigation__link" href=""><i class="mdl-color-text--blue-grey-400 material-icons" role="presentation">access_time</i>Recently Read</a> #}
-        {% for feedId, feed in feeds %}
-          <a class="feed-link mdl-navigation__link" href="{{ urlFor('/feed/:feed', { feed: slugifyUrl(feed.url) }) }}">
-            <i class="mdl-color-text--blue-grey-400 material-icons" role="presentation">
-              {%- if feed.icon -%}
-                <img src="{{ feed.icon }}" />
-              {%- else -%}
-                feed
-              {%- endif -%}
-            </i>
-            <span style="text-overflow: ellipsis; overflow: hidden;">
-              {{ feed.name }}
-              <br>
-              <span class="clamped-text" style="font-size: smaller; line-break: anywhere; line-clamp: 1; -webkit-line-clamp: 1;" title="{{ feed.url }}">{{ feed.url }}</span>
-            </span>
-          </a>
-        {% endfor %}
+          {# <a class="mdl-navigation__link" href=""><i class="mdl-color-text--blue-grey-400 material-icons" role="presentation">star</i>Favorites</a>
+          <a class="mdl-navigation__link" href=""><i class="mdl-color-text--blue-grey-400 material-icons" role="presentation">access_time</i>Recently Read</a> #}
+          {% for feed in feedsArray %}
+            <a class="feed-link mdl-navigation__link" href="{{ urlFor('/feed/:feed', { feed: slugifyUrl(feed.url) }) }}">
+              <i class="mdl-color-text--blue-grey-400 material-icons" role="presentation">
+                {%- if feed.icon -%}
+                  <img src="{{ feed.icon }}" />
+                {%- else -%}
+                  feed
+                {%- endif -%}
+              </i>
+              <span style="text-overflow: ellipsis; overflow: hidden;">
+                {{ feed.name }}
+                <br>
+                <span class="clamped-text" style="font-size: smaller; line-break: anywhere; line-clamp: 1; -webkit-line-clamp: 1;" title="{{ feed.url }}">{{ feed.url }}</span>
+              </span>
+            </a>
+          {% endfor %}
+        {% endif %}
       </nav>
     </div>
     <main class="mdl-layout__content mdl-color--grey-100">

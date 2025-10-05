@@ -16,6 +16,7 @@
 {%- block classes -%}
   {%- if Prefs.DefaultView == 'grid' -%} grid-layout {%- endif -%}
   {%- if Prefs.DefaultView == 'list' -%} list-layout {%- endif -%}
+  {%- if Prefs.DefaultView == 'flow' -%} flow-layout {%- endif -%}
 {%- endblock -%}
 {%- block menuitems -%}
   <li><button class="mdl-menu__item" onclick="navigator.clipboard.writeText((location.href.endsWith('/') ? location.href.slice(0, -1) : location.href) + '/atom');">Copy Bridge URL (Atom)</button></li>
@@ -68,6 +69,10 @@
         <input type="radio" id="list-view" class="mdl-icon-toggle__input" name="layout-toggle" {% if Prefs.DefaultView == 'list' %} checked {% endif %} />
         <i class="mdl-icon-toggle__label material-icons">view_list</i>
       </label>
+      <label class="mdl-icon-toggle mdl-js-icon-toggle mdl-js-ripple-effect" for="flow-view" title="Flow View">
+        <input type="radio" id="flow-view" class="mdl-icon-toggle__input" name="layout-toggle" {% if Prefs.DefaultView == 'list' %} checked {% endif %} />
+        <i class="mdl-icon-toggle__label material-icons">view_stream</i>
+      </label>
     </div>
   </div>
   
@@ -95,7 +100,13 @@
         </div>
         <div class="rss-card-meta">
           <span>
-            <i class="material-icons" style=" font-size: 20px; float: left; margin-right: 8px;">feed</i>
+            <span class="icon">
+              {% if feeds[entry.feedId].icon %}
+                <img src="{{ feeds[entry.feedId].icon }}" />
+              {% else %}
+                <i class="material-icons">feed</i>
+              {% endif %}
+            </span>
             {{ feeds[entry.feedId].name }}
           </span>
           <span class="time" title="{{ entry.published }}">{{ entry.relPublished }}</span>
@@ -122,14 +133,61 @@
         </div>
         <div class="rss-list-content">
           <div class="rss-list-title">{{ entry.title or ('&nbsp;' | safe) }}</div>
-          <div class="rss-list-preview">{{ entry.summary }}</div>
+          <div class="rss-list-preview">{{ entry.summary or ('&nbsp;' | safe) }}</div>
           <div class="rss-list-meta">
             <span>
-              <i class="material-icons" style=" font-size: 20px; float: left; margin-right: 8px;">feed</i>
+              <span class="icon">
+                {% if feeds[entry.feedId].icon %}
+                  <img src="{{ feeds[entry.feedId].icon }}" />
+                {% else %}
+                  <i class="material-icons">feed</i>
+                {% endif %}
+              </span>
               {{ feeds[entry.feedId].name }}
             </span>
             <span class="time" title="{{ entry.published }}">{{ entry.relPublished }}</span>
           </div>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+
+  <div id="flow-layout" class="mdl-grid">
+    {% for entry in entries %}
+      <a rel="noopener"
+        {% if Prefs.ReaderMode %}
+          href="{{ urlFor('/entry/:entry', { entry: slugifyUrl(entry.link) }) }}"
+        {% else %}
+          href="{{ entry.link }}" target="_blank"
+        {% endif %}
+      class="mdl-card mdl-shadow--2dp rss-card mdl-cell mdl-cell--8-col">
+        <div class="rss-card-image">
+          {% if entry.embed %}
+            <iframe {% if entry.image %} style="background-image: url('{{ entry.image }}');" {% endif %} src="{{ entry.embed }}" loading="lazy" allow="fullscreen" allowfullscreen></iframe>
+          {% elif entry.video %}
+            <video src="{{ entry.video }}" controls></video>
+          {% elif entry.image %}
+            <img src="{{ entry.image }}" loading="lazy" />
+          {% endif %}
+        </div>
+        {% if entry.title or entry.summary %}
+          <div class="rss-card-content">
+            <div class="rss-card-title">{{ entry.title }}</div>
+            <div class="rss-card-preview">{{ entry.summary }}</div>
+          </div>
+        {% endif %}
+        <div class="rss-card-meta">
+          <span>
+            <span class="icon">
+              {% if feeds[entry.feedId].icon %}
+                <img src="{{ feeds[entry.feedId].icon }}" />
+              {% else %}
+                <i class="material-icons">feed</i>
+              {% endif %}
+            </span>
+            {{ feeds[entry.feedId].name }}
+          </span>
+          <span class="time" title="{{ entry.published }}">{{ entry.relPublished }}</span>
         </div>
       </a>
     {% endfor %}
@@ -158,32 +216,53 @@
   </div>
 
   <script>
-    const gridViewButton = document.getElementById('grid-view');
-    const listViewButton = document.getElementById('list-view');
+    const gridButton = document.getElementById('grid-view');
+    const listButton = document.getElementById('list-view');
+    const flowButton = document.getElementById('flow-view');
+
     const gridLayout = document.getElementById('grid-layout');
     const listLayout = document.getElementById('list-layout');
+    const flowLayout = document.getElementById('flow-layout');
     
-    gridViewButton.addEventListener('click', function() {
+    gridButton.addEventListener('click', function() {
       document.body.classList.remove('list-layout');
+      document.body.classList.remove('flow-layout');
       document.body.classList.add('grid-layout');
-      gridViewButton.checked = true;
-      listViewButton.checked = false;
-      listViewButton.parentElement.classList.remove('is-checked');
+      gridButton.checked = true;
+      listButton.checked = false;
+      flowButton.checked = false;
+      listButton.parentElement.classList.remove('is-checked');
+      flowButton.parentElement.classList.remove('is-checked');
       localStorage.setItem('defaultView', 'grid');
     });
     
-    listViewButton.addEventListener('click', function() {
+    listButton.addEventListener('click', function() {
       document.body.classList.remove('grid-layout');
+      document.body.classList.remove('flow-layout');
       document.body.classList.add('list-layout');
-      listViewButton.checked = true;
-      gridViewButton.checked = false;
-      gridViewButton.parentElement.classList.remove('is-checked');
+      listButton.checked = true;
+      gridButton.checked = false;
+      flowButton.checked = false;
+      gridButton.parentElement.classList.remove('is-checked');
+      flowButton.parentElement.classList.remove('is-checked');
       localStorage.setItem('defaultView', 'list');
+    });
+
+    flowButton.addEventListener('click', function() {
+      document.body.classList.remove('grid-layout');
+      document.body.classList.remove('list-layout');
+      document.body.classList.add('flow-layout');
+      flowButton.checked = true;
+      listButton.checked = false;
+      gridButton.checked = false;
+      gridButton.parentElement.classList.remove('is-checked');
+      listButton.parentElement.classList.remove('is-checked');
+      localStorage.setItem('defaultView', 'flow');
     });
 
     const defaultView = localStorage.getItem('defaultView', 'grid');
     if (defaultView) {
-      gridViewButton.checked = listViewButton.checked = false;
+      gridButton.checked = listButton.checked = false;
       document.body.classList.remove('grid-layout');
       document.body.classList.remove('list-layout');
       document.body.classList.add(`${defaultView}-layout`);
@@ -195,20 +274,14 @@
       let reconnectInterval = 1000; // 1 second
       let maxRetries = 10;
       let retries = 0;
-
+      connect();
       function connect() {
         ws = new WebSocket(url);
-
         ws.onopen = () => {
           console.log('✅ Connected');
           retries = 0; // reset on success
         };
-
         ws.onmessage = onmessage;
-        {# ws.onmessage = (event) => {
-          console.log('📨 Message:', event.data);
-        }; #}
-
         ws.onclose = (event) => {
           console.warn('⚠️ Disconnected:', event.reason);
           if (retries < maxRetries) {
@@ -219,14 +292,11 @@
             console.error('❌ Max retries reached');
           }
         };
-
         ws.onerror = (err) => {
           console.error('💥 WebSocket error:', err.message);
           ws.close(); // trigger onclose
         };
       }
-
-      connect();
     }
 
     const loadSpinner = document.getElementById('load-spinner');

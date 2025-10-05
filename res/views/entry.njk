@@ -20,7 +20,7 @@
         <a class="meta link-unstyled" style="flex-direction: row; padding: 0;" href="{{ urlFor('/feed/:feed', { feed: slugifyUrl(feed.url) }) }}">
           <div class="minilogo" style="background-image: url('{{ feed.icon }}');"></div>
           <div>
-            <strong>{{ feeds[entry.feedId].name or feeds[entry.feedId].url }}</strong>
+            <strong>{{ feed.name or feed.url }}</strong>
             <span title="{{ entry.published }}">{{ entry.relPublished }}</span>
           </div>
         </a>

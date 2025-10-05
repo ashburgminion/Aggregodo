@@ -22,7 +22,7 @@ import { JSDOM } from 'jsdom';
 import DOMPurify from 'dompurify';
 import { Config, Prefs } from './prefs';
 import createError from '@fastify/error';
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import { parseHtmlFeed } from './html-scraper';
 import { MEDIA_DIR, FEEDS_PATH, prepareFilesystem, parseBool, checkDateValid, compareDates, USER_PROFILES_PATH, parseIni, SYSTEM_PROFILES_PATH } from './util';
 
@@ -160,15 +160,27 @@ function resultize<T extends Model>(
 }
 
 function broadcastMessage(message: string, info?: string|boolean) {
-  if (info) {
-    console.log(`Broadcast: ${message}: ${info}`);
-  } else if (Config.Development) {
-    console.log('Broadcast: ' + message);
-  }
+  info
+    ? log(LogLevels.INFO, `Broadcast: ${message}: ${info}`)
+    : log(LogLevels.DEBUG, `Broadcast: ${message}`);
   for (const client of activeClients) {
     if (client.readyState === WebSocket.OPEN) {
       client.send(message);
     }
+  }
+}
+
+export enum LogLevels {
+  DEBUG,
+  ERROR,
+  INFO,
+}
+
+export function log(level: LogLevels, ...messages: any) {
+  if (Config.Development || level > LogLevels.DEBUG) {
+    level === LogLevels.ERROR
+      ? console.error(...messages)
+      : console.debug(...messages);
   }
 }
 
@@ -239,7 +251,7 @@ async function readerifyWebpage(url: string, html?: string) {
   return article;
 }
 
-const getMediaPath = (entry: Entry, media: string, filesystem: boolean) => `${filesystem ? MEDIA_DIR : '/media'}/${entry.feedId}/${entry.id}${extname(media)}`;
+const getMediaPath = (entry: Entry, media: string, filesystem: boolean) => `${filesystem ? MEDIA_DIR : '/media'}/${entry.feedId}/${entry.id}${extname(media.split('?')[0])}`;
 
 const getEntriesForView = async (feed?: Feed|null) => {
   const entries = (await Entry.findAll({ ...(feed ? { where: { feedId: feed.id } } : null) }))
@@ -279,10 +291,18 @@ function patchViewFeed(feed: FeedType): FeedType {
   return feed;
 }
 
-const getTemplateFeeds = async (feeds?: Feed[]) => (feeds || await indexFeeds()).reduce((acc: any, feed) => {
-  acc[feed.id!] = feed;
-  return acc;
-}, {});
+const getTemplateFeeds = async (feeds?: Feed[]) => {
+  const res: Record<number, Feed> = {};
+  for (const feed of (feeds || await indexFeeds())) {
+    res[feed.id!] = feed as Feed;
+  }
+  console.log(res);
+  return res;
+}
+// (feeds || await indexFeeds()).reduce((acc: any, feed) => {
+//   acc[feed.id!] = feed;
+//   return acc;
+// }, {});
 
 async function getFeedProfiles(): Promise<Record<string, FeedType>> {
   const profiles: Record<string, FeedType> = {};
@@ -295,32 +315,34 @@ async function getFeedProfiles(): Promise<Record<string, FeedType>> {
   return profiles;
 }
 
-async function getRawFeeds(): Promise<FeedType[]> {
+async function getRawFeeds(ini?: string): Promise<FeedType[]> {
+  let profiles: Record<string, FeedType>|null = null;
   const feeds: FeedType[] = [];
-  const data = parseIni(await readFile(FEEDS_PATH, 'utf8'));
+  const data = parseIni(ini || await readFile(FEEDS_PATH, 'utf8'));
   for (let url in data) {
     const props = data[url];
     if (!(url.toLowerCase().startsWith('http://') || url.toLowerCase().startsWith('https://'))) {
       url = 'https://' + url;
     }
-    feeds.push({ url, ...(props as object) });
+    let feed: FeedType = { url, ...(props as object) };
+    feed.fake_browser &&= parseBool(feed.fake_browser) ?? false;
+    if (feed.profile) {
+      if (!profiles) {
+        profiles = await getFeedProfiles();
+      }
+      feed = { ...profiles[feed.profile], ...feed };
+    }
+    feeds.push(feed);
   }
   return feeds;
 }
 
 async function indexFeeds(): Promise<FeedType[]> {
-  let profiles: Record<string, FeedType>|null = null;
   const feeds = await getRawFeeds();
   for (const feed of feeds) {
     const [dbFeed, created] = await createOrUpdate(Feed, { url: feed.url });
     if (created) {
       updateFeed(feed, dbFeed, true);
-    }
-    if (feed.profile) {
-      if (!profiles) {
-        profiles = await getFeedProfiles();
-      }
-      Object.assign(feed, profiles[feed.profile], feed);
     }
     feed.id = dbFeed!.id;
     feed.description = dbFeed.description;
@@ -332,29 +354,61 @@ async function indexFeeds(): Promise<FeedType[]> {
   return feeds;
 }
 
-async function refreshAndStoreFeed(feed: FeedType, dbFeed: Feed) {
+// function parseHeaders(text: string): Record<string, string> {
+//   const headers: Record<string, string> = {};
+//   text.split(/\r?\n/).forEach(line => {
+//     const [key, ...rest] = line.split(':');
+//     if (key && rest.length) {
+//       headers[key.trim()] = rest.join(':').trim();
+//     }
+//   });
+//   return headers;
+// }
+
+async function fetchAndParseFeed(feed: FeedType, dbFeed?: Feed|null, fakeBody?: string) {
   try {
-    const response = await axios.get(feed.url, { headers: {
-      ...(dbFeed.etag && { 'If-None-Match': dbFeed.etag }),
-      ...(dbFeed.lastModified && { 'If-Modified-Since': new Date(dbFeed.lastModified).toUTCString() }),
-    } });
-    const text = response.data;
+    const response = !fakeBody ? await axios.get(feed.url, { headers: {
+      ...(feed.fake_browser && {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:143.0) Gecko/20100101 Firefox/143.0',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Sec-Fetch-Mode': 'navigate',
+      }),
+      // ...(feed.http_headers && parseHeaders(feed.http_headers)),
+      // ...(feed.user_agent && { 'User-Agent': feed.user_agent }),
+      ...(dbFeed?.etag && { 'If-None-Match': dbFeed.etag }),
+      ...(dbFeed?.lastModified && { 'If-Modified-Since': new Date(dbFeed.lastModified).toUTCString() }),
+    } }) : null;
+    const text = !fakeBody ? response?.data: fakeBody;
     const parsed = feed.type === 'html' ? parseHtmlFeed(text, feed) : await feedParser.parseString(text);
     if (Config.Development) {
-      console.log(parsed);
+      console.log(text, parsed);
     }
-    await Feed.upsert({
-      url: feed.url,
-      name: parsed.title,
-      description: parsed.description,
-      etag: response.headers['etag'],
-      lastModified: response.headers['last-modified'],
-    });
-    await storeFavicon(feed);
-    return parsed;
+    return { parsed, response };
   } catch (e: any) {
-    console.error(`Feed ${feed.url} not refreshed due to ${e}`);
-  }
+    const error = `Feed ${feed.url} not refreshed due to ${e}`;
+    console.trace(error);
+    // console.error(e);
+    return { error };
+  }  
+}
+
+async function refreshAndStoreFeed(feed: FeedType, dbFeed: Feed) {
+  // try {
+    const { parsed, response } = await fetchAndParseFeed(feed, dbFeed);
+    if (parsed) {
+      await Feed.upsert({
+        url: feed.url,
+        name: parsed.title,
+        description: parsed.description,
+        etag: response?.headers['etag'],
+        lastModified: response?.headers['last-modified'],
+      });
+      await storeFavicon(feed);
+      return parsed;
+    }
+  // } catch (e: any) {
+  //   console.error(`Feed ${feed.url} not refreshed due to ${e}`);
+  // }
 }
 
 async function updateFeed(feed: FeedType, dbFeed: Feed, single: boolean) {
@@ -396,7 +450,7 @@ async function updateFeed(feed: FeedType, dbFeed: Feed, single: boolean) {
         } else {
           dbEntry = await dbEntry.update(entry);
         }
-        await storeMedia(dbEntry);
+        await cacheMedia(dbEntry);
       }
     }
   }
@@ -471,7 +525,7 @@ const updateFeedsTask = new AsyncTask(
   }
 );
 
-async function storeMedia(entry: Entry) {
+async function cacheMedia(entry: Entry) {
   // TODO: update media if it changes
   if (entry.image) {
     const mediaPath = getMediaPath(entry, entry.image, true);
@@ -508,24 +562,32 @@ async function findFeedBySlug(slug: string, feeds?: FeedType[]): Promise<Feed|nu
 
 app.ready().then(async () => {
   await sequelize.sync();
-  const job = new SimpleIntervalJob({ minutes: 10 }, updateFeedsTask);
+  const job = new SimpleIntervalJob({ minutes: Config.UpdateInterval }, updateFeedsTask);
   job.executeAsync();
   app.scheduler.addSimpleIntervalJob(job);
 });
 
 app.get('/', async (req: PaginatableSearchableRequest, reply) => {
-  const feeds = await getTemplateFeeds();
-  return resultize(req, reply, 'index.njk', 'entries', await getEntriesForView(), { feeds });
+  const feedsArray = await indexFeeds();
+  return resultize(req, reply, 'index.njk', 'entries', await getEntriesForView(), {
+    feedsArray, feeds: await getTemplateFeeds(feedsArray as Feed[]),
+  });
 })
 .get('/atom', async (req: PaginatableSearchableRequest, reply) => {
-  const feeds = await getTemplateFeeds();
-  return resultize(req, reply, 'atom.njk', 'entries', await getEntriesForView(), { feeds, req }, 'application/atom+xml; charset=UTF-8');
+  const feedsArray = await indexFeeds();
+  return resultize(req, reply, 'atom.njk', 'entries', await getEntriesForView(), {
+    feedsArray, feeds: await getTemplateFeeds(),
+    req }, 'application/atom+xml; charset=UTF-8');
 })
 .get('/feed/:feed', async (req: FastifyRequest<{ Params: { feed: string }, Querystring: PaginatableSearchableRequest['query'] }>, reply) => {
   const feeds = await indexFeeds();
   const feed = await findFeedBySlug(req.params.feed, feeds);
   if (feed) {
-    return resultize(req, reply, 'index.njk', 'entries', await getEntriesForView(feed), { feed, feeds: await getTemplateFeeds() });
+    return resultize(req, reply, 'index.njk', 'entries', await getEntriesForView(feed), {
+      feed,
+      feedsArray: feeds,
+      feeds: await getTemplateFeeds(feeds as Feed[]),
+    });
   } else {
     throw NotFoundError();
   }
@@ -539,32 +601,52 @@ app.get('/', async (req: PaginatableSearchableRequest, reply) => {
   }
 })
 .get('/entry/:entry', async (req: FastifyRequest<{ Params: { entry: string }, Querystring: { 'external-html': string } }>, reply) => {
+  const feeds = await indexFeeds();
   const entry = unslugifyObject(req.params.entry, await getEntriesForView(), 'link');
   if (entry) {
-    let extHtml = parseBool(req.query['external-html']);
-    if (extHtml === null) {
-      extHtml = Prefs.ExternalHtml;
+    if (Prefs.ReaderMode) {
+      let extHtml = parseBool(req.query['external-html']);
+      if (extHtml === null) {
+        extHtml = Prefs.ExternalHtml;
+      }
+      if (extHtml && entry.html) {
+        const $ = cheerio.load(entry.html);
+        $('a[href]').each((_i, el) => {
+          $(el).attr('target', '_blank');
+          $(el).attr('rel', 'nofollow noopener');
+        });
+        entry.html = $.html();
+      }
+      const feed = patchViewFeed((await Feed.findOne({ where: { id: entry.feedId } }))!);
+      return reply.view('entry.njk', { feed, feeds: await getTemplateFeeds(feeds as Feed[]), feedsArray: feeds, entry, extHtml });
+    } else {
+      return reply.redirect(entry.link!);
     }
-    if (extHtml && entry.html) {
-      const $ = cheerio.load(entry.html);
-      $('a[href]').each((_i, el) => {
-        $(el).attr('target', '_blank');
-        $(el).attr('rel', 'nofollow noopener');
-      });
-      entry.html = $.html();
-    }
-    const feed = patchViewFeed((await Feed.findOne({ where: { id: entry.feedId } }))!);
-    return reply.view('entry.njk', { feed, feeds: await getTemplateFeeds(), entry, extHtml });
   } else {
     throw NotFoundError();
   }
 });
 
-// if (Config.Development) {
-//   app.post('/api/refresh/:feed', (req: FastifyRequest<{ Params: { feed: number } }>, reply) => {
-//     await updateFeed(feed, (await Feed.findOne({ where: { url: feed.url } }))!, false);
-//   });
-// }
+if (Config.Development) {
+  app.get('/debug', (_req, reply) => {
+    return reply.view('debug.njk');
+  })
+  .post('/debug', async (req, _reply) => {
+    let output;
+    const input = JSON.parse(req.body as string);
+    if (input.ini) {
+      const feed = (await getRawFeeds(input.ini))[0];
+      output = feed;
+    } else if (input.feed) {
+      const { parsed, error } = await fetchAndParseFeed(input.feed, null, input.httpBody);
+      output = { parsed, error };
+    }
+    return output; // JSON.stringify(output, null, 2);
+  })
+  // .post('/api/refresh/:feed', (req: FastifyRequest<{ Params: { feed: number } }>, reply) => {
+  //   await updateFeed(feed, (await Feed.findOne({ where: { url: feed.url } }))!, false);
+  // });
+}
 
 app.setNotFoundHandler((_req, reply) => {
   reply

@@ -23,8 +23,12 @@ export class Feed extends Model<InferAttributes<Feed>, InferCreationAttributes<F
   declare icon?: string|null;
   declare etag?: string|null;
   declare lastModified?: Date|string|null;
+  // declare cache_images?: boolean;
   declare type?: string|null;
   // declare user_agent?: string|null;
+  // declare http_headers?: string|null;
+  declare fake_browser?: boolean;
+  declare css_namespace?: string|null;
   declare css_name?: string|null;
   declare css_description?: string|null;
   declare css_entries?: string|null;

@@ -1,6 +1,7 @@
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "fs";
 import path from "path";
 import { parse as parseIniLib } from 'js-ini';
+import { createHash } from "crypto";
 
 export const DATA_DIR = path.join(__dirname, '../data');
 export const MEDIA_DIR = path.join(DATA_DIR, 'media');
@@ -27,7 +28,7 @@ export function prepareFilesystem() {
   }
 }
 
-export function parseBool(v: boolean|string|number|null) {
+export function parseBool(v: Nullable<boolean|string|number>) {
   if (v === null || v === undefined) {
     return null;
   } else if (typeof v === 'boolean') {
@@ -56,3 +57,5 @@ export function compareDates(a: Nullable<Date|string>, b: Nullable<Date|string>)
   }
   return timeA === timeB;
 }
+
+export const debugStringHash = (str?: string|null) => str ? createHash('md5').update(str).digest('hex') : 'null';

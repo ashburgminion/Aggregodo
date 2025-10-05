@@ -1,0 +1,59 @@
+{%- extends "base.njk" -%}
+{%- block title -%}{%- endblock -%}
+{%- block section -%}Debug{%- endblock -%}
+{%- block menuitems -%}{%- endblock -%}
+{%- block content -%}
+  <div class="mdl-grid">
+    <form id="feed-input-output" style="width: 100%;">
+      {# <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+        <input class="mdl-textfield__input" type="text" id="sample3">
+        <label class="mdl-textfield__label" for="sample3">Feed URL...</label>
+      </div> #}
+      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width: 100%;">
+        <textarea class="mdl-textfield__input" type="text" rows="15" id="feed-input" spellcheck="false"></textarea>
+        <label class="mdl-textfield__label" for="feed-input">Feed INI...</label>
+      </div>
+      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width: 100%;">
+        <textarea class="mdl-textfield__input" type="text" rows="3" id="http-body" spellcheck="false"></textarea>
+        <label class="mdl-textfield__label" for="http-body">Fake HTTP Response</label>
+      </div>
+      <div class="mdl-grid">
+        <div class="mdl-cell">
+          <button class="mdl-button mdl-js-button mdl-button--raised" type="submit">Test</button>
+        </div>
+        <div class="mdl-cell">
+          <label class="mdl-switch mdl-js-switch mdl-js-ripple-effect" for="switch-http-body">
+            <input type="checkbox" id="switch-http-body" class="mdl-switch__input" checked>
+            <span class="mdl-switch__label">Send Fake HTTP Body</span>
+          </label>
+        </div>
+      </div>
+      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width: 100%;">
+        <textarea class="mdl-textfield__input" type="text" rows="15" id="feed-output" spellcheck="false" readonly></textarea>
+      </div>
+    </form>
+  </div>
+  <script>
+    const request = (body) => fetch('', { method: "POST", body: JSON.stringify(body) });
+    const stringify = (data) => JSON.stringify(data, null, 2);
+    const input = document.getElementById('feed-input');
+    const httpBodyInput = document.getElementById('http-body');
+    const switchHttpBody = document.getElementById('switch-http-body');
+    const output = document.getElementById('feed-output');
+    document.getElementById('feed-input-output').onsubmit = async (ev) => {
+      ev.preventDefault();
+      const httpBody = switchHttpBody.checked ? httpBodyInput.value : null;
+      output.value = '';
+      const response1 = await request({ ini: input.value, httpBody });
+      const feed = await response1.json();
+      output.value += stringify(feed) + '\n';
+      const response2 = await request({ feed, httpBody });
+      const parsed = await response2.json();
+      output.value += stringify(parsed) + '\n';
+    };
+    switchHttpBody.onchange = () => httpBodyInput.disabled = !switchHttpBody.checked;
+  </script>
+  <style>
+    textarea { width: 100%; font-family: monospace !important; }
+  </style>
+{%- endblock -%}

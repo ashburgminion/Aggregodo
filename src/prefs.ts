@@ -6,6 +6,7 @@ export const Config = (() => {
   const base = parseIni(readFileSync(TEMPLATE_CONFIG_PATH, 'utf8')) as Record<string, string>;
   const user = parseIni(readFileSync(CONFIG_PATH, 'utf8')) as Record<string, string>;
   const httpPort = parseInt(user.HTTP_Port);
+  const updateInterval = parseInt(user.Update_Interval);
   return {
     Development: parseBool(user.Development) ?? parseBool(base.Development) ?? false,
     Http: {
@@ -13,7 +14,8 @@ export const Config = (() => {
       Host: user.HTTP_Host || base.HTTP_Host,
     },
     LinksPrefix: user.Links_Prefix,
-    AppName: "Aggregodo",
+    AppName: user.App_Name || "Aggregodo",
+    UpdateInterval: !isNaN(updateInterval) ? updateInterval : parseInt(base.Update_Interval),
   };
 })();
 
@@ -21,11 +23,11 @@ type PrefsType = {
   ReaderMode: boolean,
   ExternalHtml: boolean,
   ResultLimit: number,
-  DefaultView: 'grid'|'list',
+  DefaultView: 'grid'|'list'|'flow',
 };
 
 export const Prefs: PrefsType = {
-  ReaderMode: true,
+  ReaderMode: false,
   ExternalHtml: true,
   ResultLimit: 30,
   DefaultView: "grid",
