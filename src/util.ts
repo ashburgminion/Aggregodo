@@ -1,30 +1,21 @@
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "fs";
-import path from "path";
 import { parse as parseIniLib } from 'js-ini';
 import { createHash } from "crypto";
-
-export const DATA_DIR = path.join(__dirname, '../data');
-export const MEDIA_DIR = path.join(DATA_DIR, 'media');
-export const FEEDS_PATH = path.join(DATA_DIR, 'feeds.ini');
-export const USER_PROFILES_PATH = path.join(DATA_DIR, 'profiles.ini');
-export const SYSTEM_PROFILES_PATH = path.join(__dirname, '../res/profiles.ini');
-export const SQLITE_PATH = path.join(DATA_DIR, 'data.sqlite');
-export const CONFIG_PATH = path.join(DATA_DIR, 'config.ini');
-export const TEMPLATE_CONFIG_PATH = path.join(__dirname, '../res/config.template.ini');
+import { PATHS } from "./data";
 
 export type Nullable<T> = T|null|undefined;
 
 export const parseIni = (ini: string) => parseIniLib(ini, { comment: ['#', ';'] });
 
 export function prepareFilesystem() {
-  mkdirSync(DATA_DIR, { recursive: true });
-  for (const file of [FEEDS_PATH, USER_PROFILES_PATH]) {
+  mkdirSync(PATHS.DATA_DIR, { recursive: true });
+  for (const file of [PATHS.FEEDS, PATHS.USER_PROFILES]) {
     if (!existsSync(file)) {
       writeFileSync(file, '');
     }
   }
-  if (!existsSync(CONFIG_PATH)) {
-    copyFileSync(TEMPLATE_CONFIG_PATH, CONFIG_PATH);
+  if (!existsSync(PATHS.CONFIG)) {
+    copyFileSync(PATHS.TEMPLATE_CONFIG, PATHS.CONFIG);
   }
 }
 
@@ -59,3 +50,5 @@ export function compareDates(a: Nullable<Date|string>, b: Nullable<Date|string>)
 }
 
 export const debugStringHash = (str?: string|null) => str ? createHash('md5').update(str).digest('hex') : 'null';
+
+// export const extendMerge = <A, B extends A>(a: A, b: B): A & B => ({ ...a, ...b });

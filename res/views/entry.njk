@@ -4,6 +4,7 @@
 {%- block menuitems -%}
   <li><a class="mdl-menu__item" href="?external-html={{ (extHtml - 1) * -1 }}" rel="nofollow">Switch Content</a></li>
 {%- endblock -%}
+{%- block canonical -%}{{ entry.link }}{%- endblock -%}
 {%- block content -%}
   <div class="demo-blog__posts mdl-grid">
     <div class="mdl-card mdl-shadow--4dp mdl-cell mdl-cell--12-col">
@@ -37,7 +38,7 @@
           <i class="material-icons" role="presentation">share</i>
           <span class="visuallyhidden">share</span>
         </div> #}
-        <button id="copy-link" class="mdl-button mdl-js-button mdl-button--icon" onclick="navigator.clipboard.writeText(location.href);">
+        <button id="copy-link" class="mdl-button mdl-js-button mdl-button--icon" onclick="copyToClipboard(location.href);">
           <i class="material-icons">link</i>
         </button>
         <span for="copy-link" class="mdl-tooltip">Copy Link</span>

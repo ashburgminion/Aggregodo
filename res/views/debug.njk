@@ -1,14 +1,11 @@
 {%- extends "base.njk" -%}
-{%- block title -%}{%- endblock -%}
+{%- block title -%}Debug{%- endblock -%}
 {%- block section -%}Debug{%- endblock -%}
 {%- block menuitems -%}{%- endblock -%}
+{%- block canonical -%}{%- endblock -%}
 {%- block content -%}
   <div class="mdl-grid">
     <form id="feed-input-output" style="width: 100%;">
-      {# <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-        <input class="mdl-textfield__input" type="text" id="sample3">
-        <label class="mdl-textfield__label" for="sample3">Feed URL...</label>
-      </div> #}
       <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width: 100%;">
         <textarea class="mdl-textfield__input" type="text" rows="15" id="feed-input" spellcheck="false"></textarea>
         <label class="mdl-textfield__label" for="feed-input">Feed INI...</label>

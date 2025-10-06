@@ -2,8 +2,7 @@ import { FeedType } from "./db";
 import { JSDOM } from 'jsdom';
 import { debugStringHash, Nullable } from "./util";
 import { parse as parseJsToXml } from 'js2xmlparser';
-import { log, LogLevels } from ".";
-import { createHash } from "crypto";
+import { log, LogLevel } from ".";
 
 type CssParsedQuery = {
   namespace: string|null,
@@ -24,10 +23,10 @@ export function parseHtmlFeed(html: string, feed: FeedType) {
     const [name, ...parts] = feed.css_namespace.split(' ');
     namespaces[name] = runCssQuery(doc, parts.join(' ')) as Element;
   }
-  log(LogLevels.DEBUG, 'Created namespaces for HTML parsing:', namespaces);
+  log(LogLevel.DEBUG, 'Created namespaces for HTML parsing:', namespaces);
   if (feed.css_entries && feed.css_entry_link) {
     for (const el of runCssQuery(doc, feed.css_entries, namespaces, true) as Element[]) {
-      log(LogLevels.DEBUG, 'Parsing entry:', debugStringHash(el.outerHTML));
+      log(LogLevel.DEBUG, 'Parsing entry:', debugStringHash(el.outerHTML));
       const link = runCssQuery(el, feed.css_entry_link, namespaces);
       const published = runCssQuery(el, feed.css_entry_published, namespaces) as string;
       if (link) {
@@ -120,21 +119,7 @@ function parseOperationArgs(inner: string): CssOperationArgs {
   return args;
 }
 
-function prepareObjectToXml(obj: object): object {
-  if (Array.isArray(obj)) {
-    return obj.map(item /* (item, index) */ => ({ ['aggregodo-xml-json-array-item' /* `item${index}` */]: prepareObjectToXml(item) }));
-  } else if (typeof obj === 'object' && obj !== null) {
-    const result: any = {};
-    for (const [key, value] of Object.entries(obj)) {
-      const safeKey = /^[0-9]/.test(key) ? `key${key}` : key;
-      result[safeKey] = prepareObjectToXml(value);
-    }
-    return result;
-  }
-  return obj;
-}
-
-const jsonToDom = (json: string): Element|null => new JSDOM(parseJsToXml('root', /*prepareObjectToXml*/(JSON.parse(json))), { contentType: "text/xml" }).window.document.documentElement;//.querySelector('root');
+const jsonToDom = (json: string): Element|null => new JSDOM(parseJsToXml('root', JSON.parse(json)), { contentType: "text/xml" }).window.document.documentElement;
 
 function runCssQuery(
   node: Element,
@@ -148,31 +133,30 @@ function runCssQuery(
   query: Nullable<CssParsedQuery | string>,
   namespaces?: Record<string, Element>,
   multiple?: true,
-): Array<Element|string|null>;
+): Element[];
 
 function runCssQuery(
   node: Element,
   query: Nullable<CssParsedQuery|string>,
   namespaces: Record<string, Element> = {},
   multiple: boolean = false,
-): Element|string|null|Array<Element|string|null> {
+): Element[]|Element|string|null {
   let lastEls: Element[] = [];
   let res: Element|string|null = null;
   if (typeof query === 'string') {
     query = parseCssQuery(query);
   }
-  log(LogLevels.DEBUG, 'Running CSS query:', query);
+  log(LogLevel.DEBUG, 'Running CSS query:', query);
   if (query) {
     for (const filter of query.filters) {
       if (typeof filter === 'string') {
         const el = query.namespace ? namespaces[query.namespace] : (lastEls[0] || node);
-        // log(LogLevels.DEBUG, `lastEls: ${lastEls.length}, lastEls[0]: ${lastEls[0]}, node: ${node ? debugStringHash(node.outerHTML): 'null'}`);
-        log(LogLevels.DEBUG, `Running CSS filter: ${filter}, on: ${debugStringHash(el?.outerHTML)}`);
+        log(LogLevel.DEBUG, `Running CSS filter: ${filter}, on: ${debugStringHash(el?.outerHTML)}`);
         lastEls = el ? Array.from(el.querySelectorAll(`:scope ${filter}`)) : [];
-        log(LogLevels.DEBUG, `Found ${lastEls.length} elements`);
+        log(LogLevel.DEBUG, `Found ${lastEls.length} elements`);
       } else {
         const [op, ...args] = filter;
-        log(LogLevels.DEBUG, 'Running CSS operation:', op);
+        log(LogLevel.DEBUG, 'Running CSS operation:', op);
         switch (op) {
           case 'contains':
             const els: Element[] = [];
@@ -181,7 +165,7 @@ function runCssQuery(
                 els.push(el);
               }
             }
-            log(LogLevels.DEBUG, `Found ${els.length} elements`);
+            log(LogLevel.DEBUG, `Found ${els.length} elements`);
             lastEls = els;
             break;
         }
@@ -192,7 +176,7 @@ function runCssQuery(
     }
     const el = lastEls[0];
     if (el) {
-      log(LogLevels.DEBUG, 'Acting on element:', debugStringHash(el.outerHTML));
+      log(LogLevel.DEBUG, 'Acting on element:', debugStringHash(el.outerHTML));
       if (query.text) {
         res = el.textContent;
       } else if (query.html === 'inner') {
@@ -204,10 +188,10 @@ function runCssQuery(
         (el as any)[attr] = (el as any)[attr]; // force rewrite attributes when useful, eg. for URLs
         res = el.getAttribute(attr);
       }
-      log(LogLevels.DEBUG, 'Result data is:', res);
+      log(LogLevel.DEBUG, 'Result data is:', res);
       if (res && typeof res === 'string') {
         for (const [op, ...args] of query.ops) {
-          log(LogLevels.DEBUG, 'Running CSS operation:', op);
+          log(LogLevel.DEBUG, 'Running CSS operation:', op);
           switch (op) {
             case 'append':
               res += args[0].toString();
@@ -224,7 +208,7 @@ function runCssQuery(
     }
   }
   const out = multiple ? [] : res;
-  log(LogLevels.DEBUG, 'Output is:', out);
+  log(LogLevel.DEBUG, 'Output is:', out);
   return out;
 }
 

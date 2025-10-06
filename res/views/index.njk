@@ -14,15 +14,33 @@
   {%- if feed -%}{{ feed.name }} | Feed{%- endif -%}
 {%- endblock -%}
 {%- block classes -%}
-  {%- if Prefs.DefaultView == 'grid' -%} grid-layout {%- endif -%}
-  {%- if Prefs.DefaultView == 'list' -%} list-layout {%- endif -%}
-  {%- if Prefs.DefaultView == 'flow' -%} flow-layout {%- endif -%}
+  {%- if prefs.DefaultView == 'grid' -%} grid-layout {%- endif -%}
+  {%- if prefs.DefaultView == 'list' -%} list-layout {%- endif -%}
+  {%- if prefs.DefaultView == 'flow' -%} flow-layout {%- endif -%}
 {%- endblock -%}
 {%- block menuitems -%}
-  <li><button class="mdl-menu__item" onclick="navigator.clipboard.writeText((location.href.endsWith('/') ? location.href.slice(0, -1) : location.href) + '/atom');">Copy Bridge URL (Atom)</button></li>
-  {# { % if Config.Development % }
-    <li><button class="mdl-menu__item">Update Feed</button></li>
-  { % endif % } #}
+  <li><button class="mdl-menu__item" onclick="copyToClipboard(location.origin + (location.pathname.endsWith('/') ? location.pathname.slice(0, -1) : location.pathname) + '/atom'  + location.search);">Copy Bridge URL (Atom)</button></li>
+  <li><form method="POST">
+    <input type="hidden" name="action" value="set-prefs" />
+    <input type="hidden" name="dkey" value="ReaderMode" />
+    <input type="hidden" name="dvalue" value="{% if not prefs.ReaderMode %}on{% endif %}" />
+    <button class="mdl-menu__item" type="submit">
+      <input type="checkbox" id="checkbox-1" class="mdl-checkbox__input" style="pointer-events: none;" tabindex="-1" {% if prefs.ReaderMode %} checked {% endif %}>
+      Use Reader Mode
+    </button>
+  </form></li>
+  {% if Config.Development %}
+    {% if feed %}
+      <li><button class="mdl-menu__item" onclick="debugRequest('update-feed', {{ feed.id }});">Update Feed</button></li>
+      <li><button class="mdl-menu__item" onclick="debugRequest('force-update-feed', {{ feed.id }});">Force Update Feed</button></li>
+    {% else %}
+      <li><button class="mdl-menu__item" onclick="debugRequest('update-feed');">Update All Feeds</button></li>
+      <li><button class="mdl-menu__item" onclick="debugRequest('force-update-feed');">Force Update All Feeds</button></li>
+    {% endif %}
+  {% endif %}
+{%- endblock -%}
+{%- block canonical -%}
+  {# { %- if feed -% }{{ feed.url }}{ %- endif -% } #}
 {%- endblock -%}
 {%- block content -%}
   {% if feed %}
@@ -45,10 +63,13 @@
             {% endfor %}
           </p>
         {% endif %}
+        {% if feed.lastStatus %} {# or feed.lastModified #}
+          <pre style="white-space: normal;">{{ feed.lastStatus }}</pre> {# or ('Feed last updated at ' + feed.lastModified) #}
+        {% endif %}
       </div>
       <div class="mdl-layout-spacer" style="word-break: break-word;"></div>
       <div style="padding: /* 0 8px */ 24px 0;">
-        <button id="copy-link" class="mdl-button mdl-js-button mdl-button--icon" onclick="navigator.clipboard.writeText(location.href);">
+        <button id="copy-link" class="mdl-button mdl-js-button mdl-button--icon" onclick="copyToClipboard(location.href);">
           <i class="material-icons">link</i>
         </button>
         <span for="copy-link" class="mdl-tooltip">Copy Link</span>
@@ -61,25 +82,28 @@
       {# abc #}
     </div>
     <div class="layout-toggle">
-      <label class="mdl-icon-toggle mdl-js-icon-toggle mdl-js-ripple-effect" for="grid-view" title="Grid View">
-        <input type="radio" id="grid-view" class="mdl-icon-toggle__input" name="layout-toggle" {% if Prefs.DefaultView == 'grid' %} checked {% endif %} />
+      <label id="grid-view-label" class="mdl-icon-toggle mdl-js-icon-toggle mdl-js-ripple-effect" for="grid-view">
+        <input type="radio" id="grid-view" class="mdl-icon-toggle__input" name="layout-toggle" {% if prefs.DefaultView == 'grid' %} checked {% endif %} />
         <i class="mdl-icon-toggle__label material-icons">view_module</i>
       </label>
-      <label class="mdl-icon-toggle mdl-js-icon-toggle mdl-js-ripple-effect" for="list-view" title="List View">
-        <input type="radio" id="list-view" class="mdl-icon-toggle__input" name="layout-toggle" {% if Prefs.DefaultView == 'list' %} checked {% endif %} />
+      <span for="grid-view-label" class="mdl-tooltip">Grid View</span>
+      <label id="list-view-label" class="mdl-icon-toggle mdl-js-icon-toggle mdl-js-ripple-effect" for="list-view">
+        <input type="radio" id="list-view" class="mdl-icon-toggle__input" name="layout-toggle" {% if prefs.DefaultView == 'list' %} checked {% endif %} />
         <i class="mdl-icon-toggle__label material-icons">view_list</i>
       </label>
-      <label class="mdl-icon-toggle mdl-js-icon-toggle mdl-js-ripple-effect" for="flow-view" title="Flow View">
-        <input type="radio" id="flow-view" class="mdl-icon-toggle__input" name="layout-toggle" {% if Prefs.DefaultView == 'list' %} checked {% endif %} />
+      <span for="list-view-label" class="mdl-tooltip">List View</span>
+      <label id="flow-view-label" class="mdl-icon-toggle mdl-js-icon-toggle mdl-js-ripple-effect" for="flow-view">
+        <input type="radio" id="flow-view" class="mdl-icon-toggle__input" name="layout-toggle" {% if prefs.DefaultView == 'flow' %} checked {% endif %} />
         <i class="mdl-icon-toggle__label material-icons">view_stream</i>
       </label>
+      <span for="flow-view-label" class="mdl-tooltip">Flow View</span>
     </div>
   </div>
   
   <div id="grid-layout" class="mdl-grid">
     {% for entry in entries %}
       <a rel="noopener"
-        {% if Prefs.ReaderMode %}
+        {% if prefs.ReaderMode %}
           href="{{ urlFor('/entry/:entry', { entry: slugifyUrl(entry.link) }) }}"
         {% else %}
           href="{{ entry.link }}" target="_blank"
@@ -101,13 +125,13 @@
         <div class="rss-card-meta">
           <span>
             <span class="icon">
-              {% if feeds[entry.feedId].icon %}
-                <img src="{{ feeds[entry.feedId].icon }}" />
+              {% if feedsMap[entry.feedId].icon %}
+                <img src="{{ feedsMap[entry.feedId].icon }}" />
               {% else %}
                 <i class="material-icons">feed</i>
               {% endif %}
             </span>
-            {{ feeds[entry.feedId].name }}
+            {{ feedsMap[entry.feedId].name }}
           </span>
           <span class="time" title="{{ entry.published }}">{{ entry.relPublished }}</span>
         </div>
@@ -118,7 +142,7 @@
   <div id="list-layout" class="rss-list">
     {% for entry in entries %}
       <a rel="noopener"
-        {% if Prefs.ReaderMode %}
+        {% if prefs.ReaderMode %}
           href="{{ urlFor('/entry/:entry', { entry: slugifyUrl(entry.link) }) }}"
         {% else %}
           href="{{ entry.link }}" target="_blank"
@@ -137,13 +161,13 @@
           <div class="rss-list-meta">
             <span>
               <span class="icon">
-                {% if feeds[entry.feedId].icon %}
-                  <img src="{{ feeds[entry.feedId].icon }}" />
+                {% if feedsMap[entry.feedId].icon %}
+                  <img src="{{ feedsMap[entry.feedId].icon }}" />
                 {% else %}
                   <i class="material-icons">feed</i>
                 {% endif %}
               </span>
-              {{ feeds[entry.feedId].name }}
+              {{ feedsMap[entry.feedId].name }}
             </span>
             <span class="time" title="{{ entry.published }}">{{ entry.relPublished }}</span>
           </div>
@@ -155,7 +179,7 @@
   <div id="flow-layout" class="mdl-grid">
     {% for entry in entries %}
       <a rel="noopener"
-        {% if Prefs.ReaderMode %}
+        {% if prefs.ReaderMode %}
           href="{{ urlFor('/entry/:entry', { entry: slugifyUrl(entry.link) }) }}"
         {% else %}
           href="{{ entry.link }}" target="_blank"
@@ -179,13 +203,13 @@
         <div class="rss-card-meta">
           <span>
             <span class="icon">
-              {% if feeds[entry.feedId].icon %}
-                <img src="{{ feeds[entry.feedId].icon }}" />
+              {% if feedsMap[entry.feedId].icon %}
+                <img src="{{ feedsMap[entry.feedId].icon }}" />
               {% else %}
                 <i class="material-icons">feed</i>
               {% endif %}
             </span>
-            {{ feeds[entry.feedId].name }}
+            {{ feedsMap[entry.feedId].name }}
           </span>
           <span class="time" title="{{ entry.published }}">{{ entry.relPublished }}</span>
         </div>
@@ -216,106 +240,38 @@
   </div>
 
   <script>
-    const gridButton = document.getElementById('grid-view');
-    const listButton = document.getElementById('list-view');
-    const flowButton = document.getElementById('flow-view');
+    const viewLayouts = {};
+    const viewButtons = {};
 
-    const gridLayout = document.getElementById('grid-layout');
-    const listLayout = document.getElementById('list-layout');
-    const flowLayout = document.getElementById('flow-layout');
+    for (const layout of ['grid', 'list', 'flow']) {
+      viewLayouts[layout] = document.getElementById(layout + '-layout');
+      viewButtons[layout] = document.getElementById(layout + '-view');
+      viewButtons[layout].addEventListener('click', function(){ setViewLayout(layout) });
+    }
+
+    function setViewLayout(target) {
+      for (const layout in viewLayouts) {
+        if (layout !== target) {
+          document.body.classList.remove(layout + '-layout');
+          viewButtons[layout].checked = false;
+          viewButtons[layout].parentElement.classList.remove('is-checked');
+        }
+      }
+      viewButtons[target].checked = true;
+      document.body.classList.add(target + '-layout');
+      localStorage.setItem('defaultView', target);
+    }
     
-    gridButton.addEventListener('click', function() {
-      document.body.classList.remove('list-layout');
-      document.body.classList.remove('flow-layout');
-      document.body.classList.add('grid-layout');
-      gridButton.checked = true;
-      listButton.checked = false;
-      flowButton.checked = false;
-      listButton.parentElement.classList.remove('is-checked');
-      flowButton.parentElement.classList.remove('is-checked');
-      localStorage.setItem('defaultView', 'grid');
-    });
-    
-    listButton.addEventListener('click', function() {
-      document.body.classList.remove('grid-layout');
-      document.body.classList.remove('flow-layout');
-      document.body.classList.add('list-layout');
-      listButton.checked = true;
-      gridButton.checked = false;
-      flowButton.checked = false;
-      gridButton.parentElement.classList.remove('is-checked');
-      flowButton.parentElement.classList.remove('is-checked');
-      localStorage.setItem('defaultView', 'list');
-    });
-
-    flowButton.addEventListener('click', function() {
-      document.body.classList.remove('grid-layout');
-      document.body.classList.remove('list-layout');
-      document.body.classList.add('flow-layout');
-      flowButton.checked = true;
-      listButton.checked = false;
-      gridButton.checked = false;
-      gridButton.parentElement.classList.remove('is-checked');
-      listButton.parentElement.classList.remove('is-checked');
-      localStorage.setItem('defaultView', 'flow');
-    });
-
     const defaultView = localStorage.getItem('defaultView', 'grid');
     if (defaultView) {
-      gridButton.checked = listButton.checked = false;
-      document.body.classList.remove('grid-layout');
-      document.body.classList.remove('list-layout');
-      document.body.classList.add(`${defaultView}-layout`);
-      document.getElementById(`${defaultView}-view`).checked = true;
+      setViewLayout(defaultView);
     }
 
-    function createWebSocket(url, onmessage) {
-      let ws;
-      let reconnectInterval = 1000; // 1 second
-      let maxRetries = 10;
-      let retries = 0;
-      connect();
-      function connect() {
-        ws = new WebSocket(url);
-        ws.onopen = () => {
-          console.log('✅ Connected');
-          retries = 0; // reset on success
-        };
-        ws.onmessage = onmessage;
-        ws.onclose = (event) => {
-          console.warn('⚠️ Disconnected:', event.reason);
-          if (retries < maxRetries) {
-            setTimeout(connect, reconnectInterval);
-            retries++;
-            reconnectInterval *= 2; // exponential backoff
-          } else {
-            console.error('❌ Max retries reached');
-          }
-        };
-        ws.onerror = (err) => {
-          console.error('💥 WebSocket error:', err.message);
-          ws.close(); // trigger onclose
-        };
+    {% if Config.Development %}
+      async function debugRequest(action, data) {
+        const response = await fetch('/debug', { method: "POST", body: JSON.stringify({ action, data }) });
+        alert(`${response.status}: ${await response.text()}`);
       }
-    }
-
-    const loadSpinner = document.getElementById('load-spinner');
-    const reloadButton = document.getElementById('reload-button');
-
-    createWebSocket('/ws', (event) => {
-      switch (event.data) {
-        case 'FEED_UPDATE_STARTED':
-        case 'FEEDS_UPDATE_STARTED':
-        case 'FEEDS_UPDATE_RUNNING':
-          loadSpinner.hidden = false;
-          reloadButton.hidden = true;
-          break;
-        case 'FEED_UPDATE_FINISHED':
-        case 'FEEDS_UPDATE_FINISHED':
-          loadSpinner.hidden = true;
-          reloadButton.hidden = false;
-          break;
-      }
-    });
+    {% endif %}
   </script>
 {%- endblock -%}

@@ -1,11 +1,11 @@
 import { CreationOptional, Sequelize } from 'sequelize';
 import { DataTypes, Model, InferAttributes, InferCreationAttributes, Attributes } from 'sequelize';
 import { Config } from './prefs';
-import { SQLITE_PATH } from './util';
+import { PATHS } from './data';
 
 const sequelize = new Sequelize({
   dialect: 'sqlite',
-  storage: SQLITE_PATH,
+  storage: PATHS.SQLITE,
   logging: Config.Development,
 });
 
@@ -23,6 +23,7 @@ export class Feed extends Model<InferAttributes<Feed>, InferCreationAttributes<F
   declare icon?: string|null;
   declare etag?: string|null;
   declare lastModified?: Date|string|null;
+  declare lastStatus?: string|null;
   // declare cache_images?: boolean;
   declare type?: string|null;
   // declare user_agent?: string|null;
@@ -58,6 +59,7 @@ Feed.init(
     description: DataTypes.TEXT,
     etag: DataTypes.TEXT,
     lastModified: DataTypes.DATE,
+    lastStatus: DataTypes.TEXT,
   },
   { sequelize }
 );
