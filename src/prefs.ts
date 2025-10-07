@@ -1,6 +1,7 @@
 import { readFileSync } from "fs";
-import { parseBool, parseIni, prepareFilesystem } from "./util";
+import { parseBool, prepareFilesystem } from "./util";
 import { PATHS } from "./data";
+import { parseIni } from "./ini-support";
 
 export const Config = (() => {
   prepareFilesystem();

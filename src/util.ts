@@ -1,11 +1,8 @@
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "fs";
-import { parse as parseIniLib } from 'js-ini';
 import { createHash } from "crypto";
 import { PATHS } from "./data";
 
 export type Nullable<T> = T|null|undefined;
-
-export const parseIni = (ini: string) => parseIniLib(ini, { comment: ['#', ';'] });
 
 export function prepareFilesystem() {
   mkdirSync(PATHS.DATA_DIR, { recursive: true });
@@ -50,5 +47,3 @@ export function compareDates(a: Nullable<Date|string>, b: Nullable<Date|string>)
 }
 
 export const debugStringHash = (str?: string|null) => str ? createHash('md5').update(str).digest('hex') : 'null';
-
-// export const extendMerge = <A, B extends A>(a: A, b: B): A & B => ({ ...a, ...b });

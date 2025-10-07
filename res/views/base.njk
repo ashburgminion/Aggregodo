@@ -27,6 +27,7 @@
     <link rel="canonical" href="{{ canonical }}" />
   {% endif %}
   <title>{{ title }}</title>
+  <meta name="generator" content="Aggregodo" />
   <meta name="mobile-web-app-capable" content="yes" />
   <link rel="icon" sizes="192x192" href="/images/android-desktop.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -119,6 +120,9 @@
               </i>
               <span style="text-overflow: ellipsis; overflow: hidden;">
                 {{ feed.name }}
+                {% if feed.status == 'hidden' %}
+                  <span style="font-size: x-small;">(Hidden)</span>
+                {% endif %}
                 <br>
                 <span class="clamped-text" style="font-size: smaller; line-break: anywhere; line-clamp: 1; -webkit-line-clamp: 1;" title="{{ feed.url }}">{{ feed.url }}</span>
               </span>

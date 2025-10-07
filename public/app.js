@@ -37,6 +37,20 @@ function createWebSocket(url, onmessage) {
   }
 }
 
+function goToFeed(ev, el) {
+  ev.preventDefault();
+  location.href = el.dataset.feed;
+}
+
+document.querySelectorAll('[role="button"][data-feed]').forEach(el => {
+  el.addEventListener('click', ev => goToFeed(ev, el));
+  el.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') {
+      goToFeed(ev, el);
+    }
+  });
+});
+
 const loadSpinner = document.getElementById('load-spinner');
 const reloadButton = document.getElementById('reload-button');
 

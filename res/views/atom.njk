@@ -8,10 +8,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>{% if feed %}{{ feed.name }} | {% endif %}Feed | {{ Config.AppName }}</title>
-  <id>{{ feedLink }}</id>
+  <id>{{ feedLink }}{% if not feed %}/{% endif %}</id>
   <link rel="alternate" type="text/html" href="{{ feedLink }}" />
   <link rel="self" type="application/atom+xml; charset=UTF-8" href="{{ feedLink }}/atom" />
-  {%- for entry in entries -%}
+  {% if feed %}
+    <author>
+      <name>{{ feed.name }}</name>
+    </author>
+  {% endif %}
+  <updated>{{ entries[0].isoUpdated or entries[0].isoPublished }}</updated>
+  <generator uri="https://gitlab.com/octospacc/Aggregodo">Aggregodo</generator>
+
+  {% for entry in entries %}
     {%- set entryLink -%}
       {{- linksPrefix -}}{{- urlFor('/entry/:entry', { entry: slugifyUrl(entry.link) }) -}}
     {%- endset -%}
@@ -19,13 +27,22 @@
       <id>{{ entryLink }}</id>
       <link type="text/html" href="{{ entryLink }}" />
       <title>{{ entry.title }}</title>
-      <published>{{ entry.published }}</published>
+      <published>{{ entry.isoPublished }}</published>
+      <updated>{{ entry.isoUpdated or entry.isoPublished }}</updated>
+      {% if entry.author %}
+        <author>
+          <name>{{ entry.author }}</name>
+        </author>
+      {% endif %}
       <summary>{{ entry.summary }}</summary>
       <content type="html">
         <![CDATA[
+          <div>
+            {% include 'parts/entry-media.njk' %}
+          </div>
           {{ entry.content | safe }}
         ]]>
       </content>
     </entry>
-  {%- endfor -%}
+  {% endfor %}
 </feed>

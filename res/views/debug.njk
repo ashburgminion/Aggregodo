@@ -5,13 +5,14 @@
 {%- block canonical -%}{%- endblock -%}
 {%- block content -%}
   <div class="mdl-grid">
+    <p>This is the debug page. The fields below allow you to perform useful runtime tests. The sidebar shows all feeds, including hidden ones.</p>
     <form id="feed-input-output" style="width: 100%;">
       <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width: 100%;">
         <textarea class="mdl-textfield__input" type="text" rows="15" id="feed-input" spellcheck="false"></textarea>
         <label class="mdl-textfield__label" for="feed-input">Feed INI...</label>
       </div>
       <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width: 100%;">
-        <textarea class="mdl-textfield__input" type="text" rows="3" id="http-body" spellcheck="false"></textarea>
+        <textarea class="mdl-textfield__input" type="text" rows="10" id="http-body" spellcheck="false"></textarea>
         <label class="mdl-textfield__label" for="http-body">Fake HTTP Response</label>
       </div>
       <div class="mdl-grid">
@@ -27,6 +28,7 @@
       </div>
       <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width: 100%;">
         <textarea class="mdl-textfield__input" type="text" rows="15" id="feed-output" spellcheck="false" readonly></textarea>
+        <label class="mdl-textfield__label" for="feed-output">Response Preview</label>
       </div>
     </form>
   </div>
@@ -45,8 +47,11 @@
       const feed = await response1.json();
       output.value += stringify(feed) + '\n';
       const response2 = await request({ feed, httpBody });
-      const parsed = await response2.json();
-      output.value += stringify(parsed) + '\n';
+      const { parsed, error, text } = await response2.json();
+      output.value += stringify(parsed || error) + '\n';
+      if (text) {
+        httpBodyInput.value = text;
+      }
     };
     switchHttpBody.onchange = () => httpBodyInput.disabled = !switchHttpBody.checked;
   </script>

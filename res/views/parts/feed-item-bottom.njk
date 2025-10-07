@@ -1,0 +1,11 @@
+<span tabindex="0" role="button" data-feed="{{ urlFor('/feed/:feed', { feed: slugifyUrl(feedsMap[entry.feedId].url) }) }}">
+  <span class="icon">
+    {% if feedsMap[entry.feedId].icon %}
+      <img src="{{ feedsMap[entry.feedId].icon }}" />
+    {% else %}
+      <i class="material-icons">feed</i>
+    {% endif %}
+  </span>
+  {{ feedsMap[entry.feedId].name }}
+</span>
+<span class="time" title="{{ entry.published }}">{{ entry.relPublished }}</span>

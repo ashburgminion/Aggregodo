@@ -3,6 +3,9 @@
 {%- block title -%}{{ entry.title }} | Entry{%- endblock -%}
 {%- block menuitems -%}
   <li><a class="mdl-menu__item" href="?external-html={{ (extHtml - 1) * -1 }}" rel="nofollow">Switch Content</a></li>
+  {% if Config.Development %}
+    <li><a class="mdl-menu__item" href="{{ urlFor('/entry/:entry/markdown', { entry: slugifyUrl(entry.link) }) }}" rel="nofollow">View Markdown</a></li>
+  {% endif %}
 {%- endblock -%}
 {%- block canonical -%}{{ entry.link }}{%- endblock -%}
 {%- block content -%}
@@ -49,13 +52,7 @@
         {% elif entry.content %}
           {{ entry.content | safe }}
         {% else %}
-          {% if entry.embed %}
-            <iframe style="{% if entry.image %} background-image: url('{{ entry.image }}'); {% endif %}" src="{{ entry.embed }}" loading="lazy" allow="fullscreen" allowfullscreen></iframe>
-          {% elif entry.video %}
-            <video src="{{ entry.video }}" controls></video>
-          {% elif entry.image %}
-            <img src="{{ entry.image }}" loading="lazy" />
-          {% endif %}
+          {% include 'parts/entry-media.njk' %}
           {% if entry.summary %}
             <p>
               {% for line in entry.summary.split('\n') %}

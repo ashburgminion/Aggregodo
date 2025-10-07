@@ -1,0 +1,10 @@
+{%- if entryLink -%}
+  {% set prefix %}{{ linksPrefix }}{% endset %}
+{%- endif -%}
+{%- if entry.embed -%}
+  <iframe style="{% if entry.image %} background-image: url('{{ prefix }}{{ entry.image }}'); {% endif %}" src="{{ entry.embed }}" loading="lazy" allow="fullscreen" allowfullscreen></iframe>
+{%- elif entry.video -%}
+  <video src="{{ prefix }}{{ entry.video }}" controls></video>
+{%- elif entry.image -%}
+  <img src="{{ prefix }}{{ entry.image }}" loading="lazy" />
+{%- endif -%}

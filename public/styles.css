@@ -81,9 +81,9 @@ html, body {
           flex-grow: 1;
 }
 .demo-layout .demo-navigation .mdl-navigation__link {
-  display: -webkit-flex /* !important */;
-  display: -ms-flexbox /* !important */;
-  display: flex /* !important */;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
   -webkit-flex-direction: row;
       -ms-flex-direction: row;
           flex-direction: row;
@@ -120,11 +120,6 @@ html, body {
           flex-shrink: 0;
 }
 
-/* .demo-blog.mdl-layout .mdl-layout__content {
-  padding-top: 230px;
-  position: relative;
-  -webkit-overflow-scrolling: touch;
-} */
 .demo-blog .mdl-card {
   display: -webkit-flex;
   display: -ms-flexbox;
@@ -135,7 +130,6 @@ html, body {
   -webkit-align-items: stretch;
        -ms-flex-align: stretch;
           align-items: stretch;
-  /* min-height: 360px; */
 }
 .demo-blog .mdl-card__title {
   padding: 16px;
@@ -159,7 +153,6 @@ html, body {
   -webkit-align-items: flex-end;
        -ms-flex-align: end;
           align-items: flex-end;
-  /* cursor: pointer; */
 }
 .demo-blog .mdl-card__media a,
 .demo-blog .mdl-card__title a {
@@ -240,7 +233,6 @@ html, body {
           flex-direction: column;
 }
 
-/* .demo-blog .demo-blog__posts >  */
 .demo-nav {
   margin: 12px 15px;
   display: -webkit-flex;
@@ -255,25 +247,15 @@ html, body {
   -webkit-align-items: center;
        -ms-flex-align: center;
           align-items: center;
-  /* color: white; */
   font-weight: 500;
 }
-/* .demo-blog .demo-blog__posts >  */
 .demo-nav > .demo-nav__button {
-  /* color: white; */
   color: inherit;
   text-decoration: none;
 }
-/* .demo-blog .demo-blog__posts >  */
-/* .demo-nav .mdl-button {
-  color: rgba(0,0,0,0.54);
-  background-color: white;
-} */
-/* .demo-blog .demo-blog__posts >  */
 .demo-nav > .demo-nav__button:first-child .mdl-button {
   margin-right: 16px;
 }
-/* .demo-blog .demo-blog__posts >  */
 .demo-nav > .demo-nav__button:last-child .mdl-button {
   margin-left: 16px;
 }
@@ -303,11 +285,9 @@ html, body {
   background-color: transparent;
 }
 .demo-blog--blogpost .demo-blog__posts > .mdl-card .mdl-card__media {
-  /* background-image: url('images/road_big.jpg'); */
   background-position: center;
   background-blend-mode: soft-light;
   min-height: 280px;
-  /* height: 280px; */
 }
 .demo-blog--blogpost .comments {
   background-color: #EEE;
@@ -501,9 +481,6 @@ html, body {
 .social-btn__blogger {
   background-image: url('https://www.gstatic.com/images/icons/material/system/2x/post_facebook_black_24dp.png');
 }
-.social-btn__gplus {
-  background-image: url('https://www.gstatic.com/images/icons/material/system/2x/post_gplus_black_24dp.png');
-}
 .social-btn__share {
   color: rgba(0, 0, 0, 0.54);
   background: transparent;
@@ -524,11 +501,6 @@ html, body {
   padding: 16px;
 }
 
-/* RSS Reader specific styles */
-/* .rss-content {
-  padding: 16px;
-} */
-
 .top-actions {
   display: flex;
   padding: 16px 16px 8px 16px;
@@ -537,8 +509,6 @@ html, body {
 .layout-toggle {
   display: flex;
   justify-content: flex-end;
-  /* margin-bottom: 16px;
-  padding: 16px 16px 8px 16px; */
 }
 
 .rss-card,
@@ -547,17 +517,6 @@ html, body {
   color: inherit;
   transition: background-color 0.2s;
 }
-
-/* .rss-card {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-} */
-
-/* .rss-card-image > * {
-  width: 100%;
-  height: auto;
-} */
 
 #grid-layout .rss-card-image {
   width: 100%;
@@ -568,9 +527,7 @@ html, body {
   overflow: hidden;
 }
 
-#grid-layout .rss-card-image > * /* img,
-#grid-layout .rss-card-image video,
-#grid-layout .rss-card-image iframe */ { 
+#grid-layout .rss-card-image > * {
   position: absolute;
   width: 100%;
   height: 100%;
@@ -588,6 +545,13 @@ html, body {
   height: auto;
   max-width: 100%;
   max-height: 60vh;
+}
+
+#flow-layout .rss-card-image > iframe {
+  width: 100%;
+  height: 60vh;
+  background-size: cover;
+  background-position: center;
 }
 
 .rss-card-content {
@@ -693,20 +657,6 @@ html, body {
   color: rgba(0,0,0,0.54);
 }
 
-/* Hidden layout */
-/* .layout-hidden {
-  display: none !important;
-} */
-
-/* Active toggle button */
-.layout-toggle .mdl-button--active {
-  background-color: rgba(0,0,0,0.1);
-}
-
-/* .mdl-layout {
-  height: 100%;
-} */
-
 .header-extra {
   margin: 16px;
 }
@@ -733,7 +683,6 @@ body.flow-layout #flow-layout {
 
 .entry-content img,
 .entry-content video,
-/* .entry-content iframe, */
 .entry-content > * {
   max-width: 100%;
   height: auto;

@@ -4,18 +4,20 @@ import { debugStringHash, Nullable } from "./util";
 import { parse as parseJsToXml } from 'js2xmlparser';
 import { log, LogLevel } from ".";
 
-type CssParsedQuery = {
+type CssValueQuery = {
+  text?: boolean;
+  html?: 'inner'|'outer'|null;
+  attr?: string|null;
+}
+type CssParsedQuery = CssValueQuery & {
   namespace: string|null,
   filters: (string|CssOperation)[];
-  text: boolean;
-  html: 'inner'|'outer'|null;
-  attr: string|null;
   ops: CssOperation[],
 };
 type CssOperation = [string, ...CssOperationArgs];
 type CssOperationArgs = (string|number)[];
 
-export function parseHtmlFeed(html: string, feed: FeedType) {
+export function parseHtmlFeed(html: string, feed: FeedType, allowInvalid: boolean = false) {
   const doc = new JSDOM(html, { url: feed.url }).window.document.documentElement;
   const items: any[] = [];
   const namespaces: Record<string, Element> = {};
@@ -24,19 +26,22 @@ export function parseHtmlFeed(html: string, feed: FeedType) {
     namespaces[name] = runCssQuery(doc, parts.join(' ')) as Element;
   }
   log(LogLevel.DEBUG, 'Created namespaces for HTML parsing:', namespaces);
-  if (feed.css_entries && feed.css_entry_link) {
-    for (const el of runCssQuery(doc, feed.css_entries, namespaces, true) as Element[]) {
+  if (allowInvalid || (feed.css_entries && feed.css_entry_link)) {
+    for (const el of runCssQuery(doc, feed.css_entries, namespaces, null, true) as Element[]) {
       log(LogLevel.DEBUG, 'Parsing entry:', debugStringHash(el.outerHTML));
-      const link = runCssQuery(el, feed.css_entry_link, namespaces);
+      const link = runCssQuery(el, feed.css_entry_link, namespaces, [{ attr: 'href' }]);
       const published = runCssQuery(el, feed.css_entry_published, namespaces) as string;
-      if (link) {
+      if (allowInvalid || link) {
         items.push({
           guid: link,
           link,
-          title: runCssQuery(el, feed.css_entry_title, namespaces),
-          summary: runCssQuery(el, feed.css_entry_summary, namespaces),
+          title: runCssQuery(el, feed.css_entry_title, namespaces, [{ text: true }]),
+          summary: runCssQuery(el, feed.css_entry_summary, namespaces, [{ text: true }]),
+          content: runCssQuery(el, feed.css_entry_content, namespaces, [{ html: 'inner' }]),
           published: published && new Date((published && parseInt(published)) || published),
-          image: runCssQuery(el, feed.css_entry_image, namespaces),
+          author: runCssQuery(el, feed.css_entry_author, namespaces, [{ text: true }]),
+          image: runCssQuery(el, feed.css_entry_image, namespaces, [{ attr: 'src' }]),
+          video: runCssQuery(el, feed.css_entry_video, namespaces, [{ attr: 'src' }]),
         });
       }
     }
@@ -125,6 +130,7 @@ function runCssQuery(
   node: Element,
   query: Nullable<CssParsedQuery | string>,
   namespaces?: Record<string, Element>,
+  valueFallbacks?: CssValueQuery[]|null,
   multiple?: false,
 ): Element|string|null;
 
@@ -132,6 +138,7 @@ function runCssQuery(
   node: Element,
   query: Nullable<CssParsedQuery | string>,
   namespaces?: Record<string, Element>,
+  valueFallbacks?: CssValueQuery[]|null,
   multiple?: true,
 ): Element[];
 
@@ -139,6 +146,7 @@ function runCssQuery(
   node: Element,
   query: Nullable<CssParsedQuery|string>,
   namespaces: Record<string, Element> = {},
+  valueFallbacks?: CssValueQuery[]|null,
   multiple: boolean = false,
 ): Element[]|Element|string|null {
   let lastEls: Element[] = [];
@@ -177,16 +185,14 @@ function runCssQuery(
     const el = lastEls[0];
     if (el) {
       log(LogLevel.DEBUG, 'Acting on element:', debugStringHash(el.outerHTML));
-      if (query.text) {
-        res = el.textContent;
-      } else if (query.html === 'inner') {
-        res = el.innerHTML;
-      } else if (query.html === 'outer') {
-        res = el.outerHTML;
-      } else if (query.attr) {
-        const attr = query.attr;
-        (el as any)[attr] = (el as any)[attr]; // force rewrite attributes when useful, eg. for URLs
-        res = el.getAttribute(attr);
+      let [res, handled] = getCssValue(query, el);
+      if (!handled && valueFallbacks) {
+        for (const fallback of valueFallbacks) {
+          [res] = getCssValue(fallback, el);
+          if (res) {
+            break;
+          }
+        }
       }
       log(LogLevel.DEBUG, 'Result data is:', res);
       if (res && typeof res === 'string') {
@@ -210,6 +216,27 @@ function runCssQuery(
   const out = multiple ? [] : res;
   log(LogLevel.DEBUG, 'Output is:', out);
   return out;
+}
+
+function getCssValue(query: CssValueQuery, el: Element): [string|null|Element, boolean] {
+  let value: string|null = null;
+  let handled = false;
+  if (query.text) {
+    value = el.textContent;
+    handled = true;
+  } else if (query.html === 'inner') {
+    value = el.innerHTML;
+    handled = true;
+  } else if (query.html === 'outer') {
+    value = el.outerHTML;
+    handled = true;
+  } else if (query.attr) {
+    const attr = query.attr;
+    (el as any)[attr] = (el as any)[attr]; // force rewrite attributes when useful, eg. for URLs
+    value = el.getAttribute(attr);
+    handled = true;
+  }
+  return [value, handled];
 }
 
 // function getWhitespaced(raw: string, ...values: string[]): number|null {

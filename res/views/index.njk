@@ -51,6 +51,9 @@
             {% if not feed.icon %}<i class="material-icons">feed</i>{% endif %}
           </div>
           <span>{{ feed.name }}</span>
+          {% if feed.status == 'hidden' %}
+            <span style="font-size: small;">(Hidden)</span>
+          {% endif %}
         </h3>
         <p style="word-break: break-word;"><a href="{{ feed.url }}" target="_blank" class="link-iconed">
           <i class="material-icons">open_in_new</i>
@@ -82,17 +85,17 @@
       {# abc #}
     </div>
     <div class="layout-toggle">
-      <label id="grid-view-label" class="mdl-icon-toggle mdl-js-icon-toggle mdl-js-ripple-effect" for="grid-view">
+      <label id="grid-view-label" class="mdl-icon-toggle mdl-js-icon-toggle mdl-js-ripple-effect" for="grid-view" tabindex="-1">
         <input type="radio" id="grid-view" class="mdl-icon-toggle__input" name="layout-toggle" {% if prefs.DefaultView == 'grid' %} checked {% endif %} />
         <i class="mdl-icon-toggle__label material-icons">view_module</i>
       </label>
       <span for="grid-view-label" class="mdl-tooltip">Grid View</span>
-      <label id="list-view-label" class="mdl-icon-toggle mdl-js-icon-toggle mdl-js-ripple-effect" for="list-view">
+      <label id="list-view-label" class="mdl-icon-toggle mdl-js-icon-toggle mdl-js-ripple-effect" for="list-view" tabindex="-1">
         <input type="radio" id="list-view" class="mdl-icon-toggle__input" name="layout-toggle" {% if prefs.DefaultView == 'list' %} checked {% endif %} />
         <i class="mdl-icon-toggle__label material-icons">view_list</i>
       </label>
       <span for="list-view-label" class="mdl-tooltip">List View</span>
-      <label id="flow-view-label" class="mdl-icon-toggle mdl-js-icon-toggle mdl-js-ripple-effect" for="flow-view">
+      <label id="flow-view-label" class="mdl-icon-toggle mdl-js-icon-toggle mdl-js-ripple-effect" for="flow-view" tabindex="-1">
         <input type="radio" id="flow-view" class="mdl-icon-toggle__input" name="layout-toggle" {% if prefs.DefaultView == 'flow' %} checked {% endif %} />
         <i class="mdl-icon-toggle__label material-icons">view_stream</i>
       </label>
@@ -123,17 +126,7 @@
           <div class="rss-card-preview">{{ entry.summary }}</div>
         </div>
         <div class="rss-card-meta">
-          <span>
-            <span class="icon">
-              {% if feedsMap[entry.feedId].icon %}
-                <img src="{{ feedsMap[entry.feedId].icon }}" />
-              {% else %}
-                <i class="material-icons">feed</i>
-              {% endif %}
-            </span>
-            {{ feedsMap[entry.feedId].name }}
-          </span>
-          <span class="time" title="{{ entry.published }}">{{ entry.relPublished }}</span>
+          {% include 'parts/feed-item-bottom.njk' %}
         </div>
       </a>
     {% endfor %}
@@ -159,17 +152,7 @@
           <div class="rss-list-title">{{ entry.title or ('&nbsp;' | safe) }}</div>
           <div class="rss-list-preview">{{ entry.summary or ('&nbsp;' | safe) }}</div>
           <div class="rss-list-meta">
-            <span>
-              <span class="icon">
-                {% if feedsMap[entry.feedId].icon %}
-                  <img src="{{ feedsMap[entry.feedId].icon }}" />
-                {% else %}
-                  <i class="material-icons">feed</i>
-                {% endif %}
-              </span>
-              {{ feedsMap[entry.feedId].name }}
-            </span>
-            <span class="time" title="{{ entry.published }}">{{ entry.relPublished }}</span>
+            {% include 'parts/feed-item-bottom.njk' %}
           </div>
         </div>
       </a>
@@ -201,17 +184,7 @@
           </div>
         {% endif %}
         <div class="rss-card-meta">
-          <span>
-            <span class="icon">
-              {% if feedsMap[entry.feedId].icon %}
-                <img src="{{ feedsMap[entry.feedId].icon }}" />
-              {% else %}
-                <i class="material-icons">feed</i>
-              {% endif %}
-            </span>
-            {{ feedsMap[entry.feedId].name }}
-          </span>
-          <span class="time" title="{{ entry.published }}">{{ entry.relPublished }}</span>
+          {% include 'parts/feed-item-bottom.njk' %}
         </div>
       </a>
     {% endfor %}

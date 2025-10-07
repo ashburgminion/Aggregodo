@@ -3,13 +3,11 @@ import { DataTypes, Model, InferAttributes, InferCreationAttributes, Attributes 
 import { Config } from './prefs';
 import { PATHS } from './data';
 
-const sequelize = new Sequelize({
+export const sequelize = new Sequelize({
   dialect: 'sqlite',
   storage: PATHS.SQLITE,
   logging: Config.Development,
 });
-
-export { sequelize };
 
 type MakeOptional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
@@ -25,9 +23,10 @@ export class Feed extends Model<InferAttributes<Feed>, InferCreationAttributes<F
   declare lastModified?: Date|string|null;
   declare lastStatus?: string|null;
   // declare cache_images?: boolean;
+  declare status?: 'hidden'|'disabled'|null;
   declare type?: string|null;
   // declare user_agent?: string|null;
-  // declare http_headers?: string|null;
+  declare http_headers?: string|null;
   declare fake_browser?: boolean;
   declare css_namespace?: string|null;
   declare css_name?: string|null;
@@ -35,11 +34,12 @@ export class Feed extends Model<InferAttributes<Feed>, InferCreationAttributes<F
   declare css_entries?: string|null;
   declare css_entry_link?: string|null;
   declare css_entry_image?: string|null;
-  // declare css_entry_video?: string|null;
+  declare css_entry_video?: string|null;
   declare css_entry_title?: string|null;
   declare css_entry_summary?: string|null;
-  // declare css_entry_content?: string|null;
+  declare css_entry_content?: string|null;
   declare css_entry_published?: string|null;
+  declare css_entry_author?: string|null;
   declare profile?: string|null;
 }
 
@@ -77,8 +77,10 @@ export class Entry extends Model<InferAttributes<Entry>, InferCreationAttributes
   declare image?: string|null;
   declare video?: string|null;
   declare embed?: string|null;
+  declare author?: string|null;
   declare published?: Date|string|null;
   declare relPublished?: string|null;
+  declare isoPublished?: string|null;
   // declare present?: boolean|null;
   declare feedId: number;
 }
@@ -102,6 +104,7 @@ Entry.init(
     html: DataTypes.TEXT,
     image: DataTypes.TEXT,
     video: DataTypes.TEXT,
+    author: DataTypes.TEXT,
     published: {
       type: DataTypes.DATE,
       set(value: any) {
