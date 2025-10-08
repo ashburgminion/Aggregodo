@@ -45,7 +45,7 @@
 {%- block content -%}
   {% if feed %}
     <div class="-mdl-layout__header-row" style="padding: 0 16px; display: flex;">
-      <div>
+      <div style="max-width: 100%;">
         <h3 style="word-break: break-word;">
           <div class="minilogo" style="float: left; background-image: url('{{ feed.icon }}');">
             {% if not feed.icon %}<i class="material-icons">feed</i>{% endif %}
@@ -66,9 +66,13 @@
             {% endfor %}
           </p>
         {% endif %}
-        {% if feed.lastStatus %} {# or feed.lastModified #}
-          <pre style="white-space: normal;">{{ feed.lastStatus }}</pre> {# or ('Feed last updated at ' + feed.lastModified) #}
-        {% endif %}
+        <details>
+          <summary>Feed Info</summary>
+          {% if feed.lastStatus %} {# or feed.lastModified #}
+            <pre style="white-space: normal;">{{ feed.lastStatus }}</pre> {# or ('Feed last updated at ' + feed.lastModified) #}
+          {% endif %}
+          <pre style="overflow: auto; padding: 8px;">{{ feedIni }}</pre>
+        </details>
       </div>
       <div class="mdl-layout-spacer" style="word-break: break-word;"></div>
       <div style="padding: /* 0 8px */ 24px 0;">

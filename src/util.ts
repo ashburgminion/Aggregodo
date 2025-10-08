@@ -47,3 +47,8 @@ export function compareDates(a: Nullable<Date|string>, b: Nullable<Date|string>)
 }
 
 export const debugStringHash = (str?: string|null) => str ? createHash('md5').update(str).digest('hex') : 'null';
+
+export const filterObject = (obj: object, keys: string[], inclusive: boolean = true, revert: boolean = true) => {
+  const entries = Object.entries(obj).filter(([key, value]) => (value && (inclusive ? keys.includes(key) : !keys.includes(key))));
+  return (revert ? Object.fromEntries(entries) : entries);
+}

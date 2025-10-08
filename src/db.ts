@@ -81,6 +81,9 @@ export class Entry extends Model<InferAttributes<Entry>, InferCreationAttributes
   declare published?: Date|string|null;
   declare relPublished?: string|null;
   declare isoPublished?: string|null;
+  // declare updated?: Date|string|null;
+  // declare relUpdated?: string|null;
+  // declare isoUpdated?: string|null;
   // declare present?: boolean|null;
   declare feedId: number;
 }

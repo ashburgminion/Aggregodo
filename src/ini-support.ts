@@ -1,5 +1,6 @@
 class IniError extends Error {}
 
+// TODO: support logging errors and returning them, without throwing?
 export function parseIni(ini: string, strict: boolean = false): Record<string, string|Record<string, string>> {
   const main: Record<string, string> = {};
   const extra: Record<string, Record<string, string>> = {};
@@ -53,3 +54,21 @@ export function parseIni(ini: string, strict: boolean = false): Record<string, s
 // export function parseIniTyped(ini: string, strict: boolean) {}
 
 // export function dumpIni(data: any, reference: string) {}
+
+export function dumpIni(data: Record<string, string|Record<string, string>>): string {
+  // TODO: sort unsectioned props to be handled before sections
+  // TODO: handle multiline values properly
+  let out = '';
+  for (const key in data) {
+    const value = data[key];
+    if (typeof value === 'object') {
+      out += `\n[${key}]\n`
+      for (const key in value) {
+        out += `${key} = ${value[key]}\n`;
+      }
+    } else {
+      out += `${key} = ${value}\n`;
+    }
+  }
+  return out;
+}

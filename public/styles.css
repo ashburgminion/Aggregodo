@@ -751,3 +751,10 @@ body.flow-layout #flow-layout {
   margin-right: auto;
   min-height: 125px;
 }
+
+details > summary {
+  cursor: pointer;
+}
+/* details > *:not(summary) {
+  cursor: initial;
+} */

@@ -4,6 +4,8 @@ import { debugStringHash, Nullable } from "./util";
 import { parse as parseJsToXml } from 'js2xmlparser';
 import { log, LogLevel } from ".";
 
+const QUERY_SEPARATOR = ';';
+
 type CssValueQuery = {
   text?: boolean;
   html?: 'inner'|'outer'|null;
@@ -20,14 +22,14 @@ type CssOperationArgs = (string|number)[];
 export function parseHtmlFeed(html: string, feed: FeedType, allowInvalid: boolean = false) {
   const doc = new JSDOM(html, { url: feed.url }).window.document.documentElement;
   const items: any[] = [];
-  const namespaces: Record<string, Element> = {};
+  const namespaces: Record<string, HTMLElement> = {};
   if (feed.css_namespace) {
     const [name, ...parts] = feed.css_namespace.split(' ');
-    namespaces[name] = runCssQuery(doc, parts.join(' ')) as Element;
+    namespaces[name] = runCssQuery(doc, parts.join(' ')) as HTMLElement;
   }
   log(LogLevel.DEBUG, 'Created namespaces for HTML parsing:', namespaces);
   if (allowInvalid || (feed.css_entries && feed.css_entry_link)) {
-    for (const el of runCssQuery(doc, feed.css_entries, namespaces, null, true) as Element[]) {
+    for (const el of runCssQuery(doc, feed.css_entries, namespaces, null, true) as HTMLElement[]) {
       log(LogLevel.DEBUG, 'Parsing entry:', debugStringHash(el.outerHTML));
       const link = runCssQuery(el, feed.css_entry_link, namespaces, [{ attr: 'href' }]);
       const published = runCssQuery(el, feed.css_entry_published, namespaces) as string;
@@ -38,7 +40,7 @@ export function parseHtmlFeed(html: string, feed: FeedType, allowInvalid: boolea
           title: runCssQuery(el, feed.css_entry_title, namespaces, [{ text: true }]),
           summary: runCssQuery(el, feed.css_entry_summary, namespaces, [{ text: true }]),
           content: runCssQuery(el, feed.css_entry_content, namespaces, [{ html: 'inner' }]),
-          published: published && new Date((published && parseInt(published)) || published),
+          published: published && new Date((published && Number(published)) || published),
           author: runCssQuery(el, feed.css_entry_author, namespaces, [{ text: true }]),
           image: runCssQuery(el, feed.css_entry_image, namespaces, [{ attr: 'src' }]),
           video: runCssQuery(el, feed.css_entry_video, namespaces, [{ attr: 'src' }]),
@@ -47,8 +49,8 @@ export function parseHtmlFeed(html: string, feed: FeedType, allowInvalid: boolea
     }
   }
   return {
-    title: runCssQuery(doc, feed.css_name, namespaces) as string,
-    description: runCssQuery(doc, feed.css_description, namespaces) as string,
+    title: runCssQuery(doc, feed.css_name, namespaces, [{ text: true }]) as string,
+    description: runCssQuery(doc, feed.css_description, namespaces, [{ text: true }]) as string,
     items,
   };
 }
@@ -67,6 +69,9 @@ function parseCssQuery(raw: string): CssParsedQuery {
       // TODO: splitting of function's inner values should account for strings that contain ")" characters
       if (c === '"' || c === "'") {
         inString = c;
+      } else if (c === QUERY_SEPARATOR) {
+        // ... TODO support multiple queries
+        break; // for now just stop at the first
       } else if (raw.startsWith(':contains(')) {
         const inner = raw.split('(')[1].split(')')[0];
         res.filters.push(['contains', ...parseOperationArgs(inner)]);
@@ -83,17 +88,16 @@ function parseCssQuery(raw: string): CssParsedQuery {
       } else if (raw.startsWith('::attr(')) {
         res.attr = raw.split('(')[1].split(')')[0];
         toSlice = '::attr()' + res.attr;
-      } else if (raw.startsWith('/@append(')) {
-        const inner = raw.split('(')[1].split(')')[0];
-        res.ops.push(['append', ...parseOperationArgs(inner)]);
-        toSlice = '/@append()' + inner;
-      } else if (raw.startsWith('/@prepend(')) {
-        const inner = raw.split('(')[1].split(')')[0];
-        res.ops.push(['prepend', ...parseOperationArgs(inner)]);
-        toSlice = '/@prepend()' + inner;
       } else if (raw.startsWith('/@json-load()')) {
         res.ops.push(['json-load']);
         toSlice = '/@json-load()';
+      } else if (raw.startsWith('/@')) {
+        const name = raw.split('(')[0].split('@')[1];
+        if (name) {
+          const inner = raw.split('(')[1].split(')')[0];
+          res.ops.push([name, ...parseOperationArgs(inner)]);
+          toSlice = '/@()' + name + inner;
+        }
       }
     } else if (c === inString) {
       inString = false;
@@ -124,33 +128,33 @@ function parseOperationArgs(inner: string): CssOperationArgs {
   return args;
 }
 
-const jsonToDom = (json: string): Element|null => new JSDOM(parseJsToXml('root', JSON.parse(json)), { contentType: "text/xml" }).window.document.documentElement;
+const jsonToDom = (json: string): HTMLElement|null => new JSDOM(parseJsToXml('root', JSON.parse(json)), { contentType: "text/xml" }).window.document.documentElement;
 
 function runCssQuery(
-  node: Element,
+  node: HTMLElement,
   query: Nullable<CssParsedQuery | string>,
-  namespaces?: Record<string, Element>,
+  namespaces?: Record<string, HTMLElement>,
   valueFallbacks?: CssValueQuery[]|null,
   multiple?: false,
-): Element|string|null;
+): HTMLElement|string|null;
 
 function runCssQuery(
-  node: Element,
+  node: HTMLElement,
   query: Nullable<CssParsedQuery | string>,
-  namespaces?: Record<string, Element>,
+  namespaces?: Record<string, HTMLElement>,
   valueFallbacks?: CssValueQuery[]|null,
   multiple?: true,
-): Element[];
+): HTMLElement[];
 
 function runCssQuery(
-  node: Element,
+  node: HTMLElement,
   query: Nullable<CssParsedQuery|string>,
-  namespaces: Record<string, Element> = {},
+  namespaces: Record<string, HTMLElement> = {},
   valueFallbacks?: CssValueQuery[]|null,
   multiple: boolean = false,
-): Element[]|Element|string|null {
-  let lastEls: Element[] = [];
-  let res: Element|string|null = null;
+): HTMLElement[]|HTMLElement|string|null {
+  let lastEls: HTMLElement[] = [];
+  let res: HTMLElement|string|string[]|null = null;
   if (typeof query === 'string') {
     query = parseCssQuery(query);
   }
@@ -167,7 +171,7 @@ function runCssQuery(
         log(LogLevel.DEBUG, 'Running CSS operation:', op);
         switch (op) {
           case 'contains':
-            const els: Element[] = [];
+            const els: HTMLElement[] = [];
             for (const el of lastEls) {
               if (el.textContent.search(args[0] as string) > -1) {
                 els.push(el);
@@ -185,7 +189,8 @@ function runCssQuery(
     const el = lastEls[0];
     if (el) {
       log(LogLevel.DEBUG, 'Acting on element:', debugStringHash(el.outerHTML));
-      let [res, handled] = getCssValue(query, el);
+      let handled;
+      [res, handled] = getCssValue(query, el);
       if (!handled && valueFallbacks) {
         for (const fallback of valueFallbacks) {
           [res] = getCssValue(fallback, el);
@@ -198,12 +203,47 @@ function runCssQuery(
       if (res && typeof res === 'string') {
         for (const [op, ...args] of query.ops) {
           log(LogLevel.DEBUG, 'Running CSS operation:', op);
+          // TODO: proper type checks
           switch (op) {
             case 'append':
               res += args[0].toString();
               break;
             case 'prepend':
               res = args[0].toString() + res;
+              break;
+            case 'split':
+              res = (res as string).split(args[0].toString());
+              break;
+            case 'join':
+              res = (res as string[]).join(args[0].toString());
+              break;
+            case 'slice':
+              res = (res as string[]).slice(args[0] as number, args[1] as number);
+              break;
+            case 'get':
+              res = (res as string[]).slice(args[0] as number)[0];
+              break;
+            /* case 'map':
+              res = (res as string[]).map(item => {
+                switch (args[0]) {
+                  case 'lowercase':
+                    return item.toLowerCase();
+                  case 'uppercase':
+                    return item.toUpperCase();
+                }
+                return item;
+              });
+              break; */
+            case 'filter':
+              res = (res as string[]).filter(item => {
+                switch (args[0]) {
+                  case 'starts-with':
+                    return item.startsWith(args[1].toString());
+                  case 'ends-with':
+                    return item.endsWith(args[1].toString());
+                }
+                return null;
+              });
               break;
             case 'json-load':
               res = jsonToDom(res as string);
@@ -213,16 +253,19 @@ function runCssQuery(
       }
     }
   }
-  const out = multiple ? [] : res;
+  const out = multiple ? [] : (res !== undefined && !Array.isArray(res) ? res : null);
   log(LogLevel.DEBUG, 'Output is:', out);
   return out;
 }
 
-function getCssValue(query: CssValueQuery, el: Element): [string|null|Element, boolean] {
+function getCssValue(query: CssValueQuery, el: HTMLElement): [string|null|HTMLElement, boolean] {
   let value: string|null = null;
   let handled = false;
   if (query.text) {
-    value = el.textContent;
+    const temp = el.cloneNode() as HTMLElement;
+    temp.innerHTML = el.innerHTML;
+    temp.querySelectorAll('br').forEach(el => el.outerHTML = '\n');
+    value = temp.textContent;
     handled = true;
   } else if (query.html === 'inner') {
     value = el.innerHTML;
@@ -232,7 +275,10 @@ function getCssValue(query: CssValueQuery, el: Element): [string|null|Element, b
     handled = true;
   } else if (query.attr) {
     const attr = query.attr;
-    (el as any)[attr] = (el as any)[attr]; // force rewrite attributes when useful, eg. for URLs
+    if (attr !== 'style') {
+      (el as any)[attr] = (el as any)[attr]; // force rewrite attributes when useful, eg. for URLs
+      // for some reason styles are emptied if doing this, so we skip it just for them
+    }
     value = el.getAttribute(attr);
     handled = true;
   }

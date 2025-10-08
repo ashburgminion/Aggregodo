@@ -20,11 +20,11 @@ import { Config, Prefs } from './prefs';
 import createError from '@fastify/error';
 import axios from 'axios';
 import { parseHtmlFeed } from './html-scraper';
-import { prepareFilesystem, parseBool, checkDateValid, compareDates } from './util';
+import { prepareFilesystem, parseBool, checkDateValid, compareDates, filterObject } from './util';
 import { PATHS, ATOM_CONTENT_TYPE } from './data';
 import cookie from '@fastify/cookie';
 import { getMediaFromHtml, patchReaderContent, readerifyWebpage, sanitizeHtml } from './html-utils';
-import { parseIni } from './ini-support';
+import { dumpIni, parseIni } from './ini-support';
 
 prepareFilesystem();
 
@@ -92,10 +92,10 @@ const app = Fastify({
 
 function slugifyUrl(url: string) {
   return url
-    .toLowerCase()
-    .replace(/^https?:\/\//, '') // Remove protocol
-    .replace(/[/?=&]/g, '-')     // Replace URL symbols with hyphens
-    .replace(/[^a-z0-9-.]/g, '') // Remove other special characters
+    ?.toLowerCase()
+    ?.replace(/^https?:\/\//, '')  // Remove protocol
+    ?.replace(/[/?=&]/g, '-')      // Replace URL symbols with hyphens
+    ?.replace(/[^a-z0-9-.]/g, ''); // Remove other special characters
 }
 
 function urlFor(route: string, params: Record<string, string|number> = {}) {
@@ -173,20 +173,31 @@ function broadcastMessage(message: string, ...info: (string|boolean)[]) {
 
 export enum LogLevel { DEBUG, TRACE, ERROR, INFO };
 
-export function log(level: LogLevel, ...messages: any) {
+export function log(level: LogLevel, ...messages: any): string|null {
   if (Config.Development || level > LogLevel.DEBUG) {
+    const { text, time } = logFormat(null, messages);
     if (Config.LogFile) {
-      createWriteStream(PATHS.LOG_FILE, { flags: 'a' }).write(messages.join(' ') + '\n');
+      createWriteStream(PATHS.LOG_FILE, { flags: 'a' }).write(text);
     }
+    let logger;
     switch (level) {
       case LogLevel.TRACE:
-        return console.trace(...messages);
+        logger = console.trace; break;
       case LogLevel.ERROR:
-        return console.error(...messages);
+        logger = console.error; break;
       default:
-        return console.debug(...messages);
+        logger = console.debug; break;
     }
+    logger(time, ...messages);
+    return text;
   }
+  return null;
+}
+
+function logFormat(text: string|null, messages?: any[]) {
+  const time = new Date().toISOString();
+  text = `[${time}] ${text || messages?.join(' ')}\n`;
+  return { text, time };
 }
 
 async function createOrUpdate<T extends Model>(
@@ -398,14 +409,14 @@ async function updateFeed(feed: Feed, single: boolean, force: boolean = false) {
     }
     await Feed.upsert({
       url: feed.url,
-      lastStatus: null,
+      lastStatus: log(LogLevel.INFO, `Updated feed with ${parsed.items.length} items`),
       ...(success && { etag: response?.headers['etag'] }),
       ...(success && { lastModified: response?.headers['last-modified'] }),
     });
   } else if (errorCode !== 304) { // HTTP not modified
     await Feed.upsert({
       url: feed.url,
-      lastStatus: error,
+      lastStatus: logFormat(error).text,
     });
   }
   if (single) {
@@ -534,10 +545,10 @@ async function findFeedById(id: number): Promise<Feed|null> {
   return null;
 }
 
-async function findFeedBySlug(slug: string, feeds?: FeedType[]): Promise<Feed|null> {
+async function findFeedBySlug(slug: string, feeds?: FeedType[]|null /* , dbMerge: boolean = true */): Promise<Feed|/*FeedType|*/null> {
   for (const feed of (feeds || await indexFeeds(true))) {
     if (slugifyUrl(feed.url) === slug) {
-      return Object.assign({}, await Feed.findOne({ where: { url: feed.url } }), feed);
+      return /* dbMerge ? */ Object.assign({}, await Feed.findOne({ where: { url: feed.url } }), feed); // : feed;
     }
   }
   return null;
@@ -561,6 +572,10 @@ ${Object.entries(data).filter(([key, value]) => (value && !['content', 'html'].i
 
 ${data.content || data.html}`;
 }
+
+// function feedToIni(feed: Feed) { // TODO
+//   return dumpIni({ [feed.url]: filterObject(feed, ['profile', 'type', 'name', 'description']) } as any);
+// }
 
 async function updateAllFeeds(force: boolean = false) {
   broadcastMessage('FEEDS_UPDATE_STARTED', true);
@@ -598,7 +613,8 @@ app
   const feed = await findFeedBySlug(req.params.feed);
   if (feed) {
     return resultize(req, reply, 'index.njk', 'entries', makeEntriesForView({ feed, feeds }), {
-      feed, feeds, feedsMap: await getTemplateFeeds(feeds as Feed[]),
+      feed, feedIni: dumpIni({ [feed.url]: filterObject((await getRawFeeds()).filter(item => item.url === feed.url)[0], ['url'], false) /* await findFeedBySlug(req.params.feed, null, false) */ } as any),
+      feeds, feedsMap: await getTemplateFeeds(feeds as Feed[]),
     });
   } else {
     throw NotFoundError();
