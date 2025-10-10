@@ -3,7 +3,9 @@ import Fastify, { FastifyReply } from 'fastify';
 import { FastifyRequest } from 'fastify';
 import view from '@fastify/view';
 import nunjucks from 'nunjucks';
-import { sequelize, Feed, FeedType, Entry, EntryType } from './db';
+import { createOrUpdate, sequelize } from './db';
+import { Feed, FeedType } from './models/feed';
+import { Entry, EntryType } from './models/entry';
 import { fastifySchedule } from '@fastify/schedule';
 import { SimpleIntervalJob, AsyncTask } from 'toad-scheduler';
 import Parser from 'rss-parser';
@@ -11,8 +13,7 @@ import fastifyStatic from '@fastify/static';
 import path, { dirname, extname } from 'path';
 import { formatDistanceToNow } from 'date-fns';
 import { WebSocket } from '@fastify/websocket';
-import { Model, ModelStatic, WhereOptions } from 'sequelize';
-import { MakeNullishOptional } from 'sequelize/types/utils';
+import { Model } from 'sequelize';
 import { createWriteStream, existsSync } from 'fs';
 import { finished } from 'stream/promises';
 import { Readable } from 'stream';
@@ -20,11 +21,17 @@ import { Config, Prefs } from './prefs';
 import createError from '@fastify/error';
 import axios from 'axios';
 import { parseHtmlFeed } from './html-scraper';
-import { prepareFilesystem, parseBool, checkDateValid, compareDates, filterObject } from './util';
+import { prepareFilesystem, parseBool, checkDateValid, compareDates, filterObject, hashString } from './util';
 import { PATHS, ATOM_CONTENT_TYPE } from './data';
 import cookie from '@fastify/cookie';
 import { getMediaFromHtml, patchReaderContent, readerifyWebpage, sanitizeHtml } from './html-utils';
 import { dumpIni, parseIni } from './ini-support';
+import { User } from './models/user';
+import bcrypt from "bcryptjs";
+
+type PaginatableRequest = FastifyRequest<{ Querystring: { page: string, limit: string } }>;
+type SearchableRequest = FastifyRequest<{ Querystring: { search: string } }>;
+type PaginatableSearchableRequest = FastifyRequest<{ Querystring: PaginatableRequest['query'] & SearchableRequest['query'] }>;
 
 prepareFilesystem();
 
@@ -53,7 +60,7 @@ const app = Fastify({
 .register(cookie)
 .register(require('@fastify/formbody'))
 .register(require('@fastify/websocket'))
-.register(async function (fastify) {
+.register(async fastify => {
   fastify.get('/ws', { websocket: true }, (socket, _req) => {
     activeClients.add(socket);
     broadcastMessage('CONNECTED');
@@ -67,7 +74,7 @@ const app = Fastify({
   engine: { nunjucks },
   templates: path.join(__dirname, '../res/views'),
   options: {
-    noCache: true,
+    noCache: Config.Development,
     onConfigure: (env: nunjucks.Environment) => {
       env.addGlobal('Config', Config);
       env.addGlobal('urlFor', urlFor);
@@ -88,6 +95,12 @@ const app = Fastify({
   if (req.url.length > 1 && req.url.endsWith('/')) {
     reply.redirect(req.url.slice(0, -1));
   }
+  // const session = req.cookies['Session'];
+  // if (session) {
+  //   const [username, hash, time] = session.split(':');
+  //   const user = await User.findOne({ where: { username } });
+  //   if (!user || ) {}
+  // }
 });
 
 function slugifyUrl(url: string) {
@@ -117,11 +130,39 @@ function getPrefs(req: FastifyRequest, all: boolean = true): typeof Prefs {
   return prefs;
 }
 
+async function getSession(req: FastifyRequest): Promise<User|null> {
+  const session = req.cookies['Session'];
+  if (session) {
+    const [username, hash] = session.split(':');
+    if (username && hash) {
+      const user = await User.findOne({ where: { username } });
+      if (user && hash === hashString(user.password, 'sha256')) {
+        return user;
+      }
+    }
+  }
+  return null;
+}
+
+// const hasSpecialFeatures = async (req: FastifyRequest, session?: User) => Config.Development || (session || await getSession(req))?.role === 'admin';
+// const hasSpecialFeatures = async ({ req, session }: { req?: FastifyRequest, session?: User }) => Config.Development || (session || await getSession(req))?.role === 'admin';
+async function hasSpecialFeatures({ req, session }: { req?: FastifyRequest, session?: User }): Promise<boolean> {
+  if (!req && !session) {
+    return false;
+  }
+  return Config.Development || (session || await getSession(req!))?.role === 'admin';
+}
+
 const getLinksPrefix = (req: FastifyRequest) => Config.LinksPrefix || `${req.protocol}://${req.hostname}:${req.port}`;
 
-type PaginatableRequest = FastifyRequest<{ Querystring: { page: string, limit: string } }>;
-type SearchableRequest = FastifyRequest<{ Querystring: { search: string } }>;
-type PaginatableSearchableRequest = FastifyRequest<{ Querystring: PaginatableRequest['query'] & SearchableRequest['query'] }>;
+async function replyView(req: FastifyRequest, reply: FastifyReply, template: string, data: any = {}) {
+  data.session ||= await getSession(req);
+  data.prefs ||= getPrefs(req);
+  data.hasSpecialFeatures = await hasSpecialFeatures(data);
+  // data.hasSpecialFeatures = Config.Development || data.session.role === 'admin';
+  data.sessionAvatar = `<span style="font-size: 24px;">${data.session ? (Math.random() < 0.03 ? '🐡' : '😺') : '👻'}</span>`;
+  return reply.view(template, data);
+}
 
 async function resultize<T extends Model>(
   req: PaginatableSearchableRequest, reply: FastifyReply,
@@ -130,9 +171,10 @@ async function resultize<T extends Model>(
   extra?: object,
   type?: string,
 ) {
+  const prefs = getPrefs(req);
   const page = parseInt(req.query.page) || 1;
   const queryLimit = parseInt(req.query.limit);
-  const limit = queryLimit || getPrefs(req).ResultLimit;
+  const limit = queryLimit || prefs.ResultLimit;
   const offset = (page - 1) * limit;
   const ceiling = offset + limit;
   const search = req.query.search?.toLowerCase();
@@ -155,9 +197,9 @@ async function resultize<T extends Model>(
   if (type) {
     reply.type(type);
   }
-  return reply.view(template, {
+  return replyView(req, reply, template, {
     [key]: items, limit: queryLimit, page, next, search,
-    prefs: getPrefs(req), linksPrefix: getLinksPrefix(req), ...extra });
+    prefs, linksPrefix: getLinksPrefix(req), ...extra });
 }
 
 function broadcastMessage(message: string, ...info: (string|boolean)[]) {
@@ -198,40 +240,6 @@ function logFormat(text: string|null, messages?: any[]) {
   const time = new Date().toISOString();
   text = `[${time}] ${text || messages?.join(' ')}\n`;
   return { text, time };
-}
-
-async function createOrUpdate<T extends Model>(
-  model: ModelStatic<T>,
-  data: MakeNullishOptional<T['_creationAttributes']>,
-): Promise<[T, boolean]> {
-  // Detect primary or unique keys
-  const keys = Object.entries(model.getAttributes())
-    .filter(([_, attr]) => attr.primaryKey || attr.unique)
-    .map(([key]) => key);
-
-  if (keys.length === 0) {
-    throw new Error(`Model ${model.name} has no primary or unique key defined.`);
-  }
-
-  // Build the WHERE clause from the key fields
-  const where: WhereOptions<T["_creationAttributes"]> = {};
-  for (const key of keys) {
-    if (data[key as keyof typeof data] !== undefined) {
-      where[key as keyof typeof where] = data[key as keyof typeof data];
-    }
-  }
-
-  let created = false;
-  let record = await model.findOne({ where });
-
-  if (!record) {
-    record = await model.create(data);
-    created = true;
-  } else {
-    record = await record.update(data);
-  }
-
-  return [record, created];
 }
 
 const getMediaPath = (entry: Entry, media: string, filesystem: boolean) => `${filesystem ? PATHS.MEDIA_DIR : '/media'}/${entry.feedId}/${entry.id}${extname(media.split('?')[0])}`;
@@ -573,9 +581,7 @@ ${Object.entries(data).filter(([key, value]) => (value && !['content', 'html'].i
 ${data.content || data.html}`;
 }
 
-// function feedToIni(feed: Feed) { // TODO
-//   return dumpIni({ [feed.url]: filterObject(feed, ['profile', 'type', 'name', 'description']) } as any);
-// }
+const canRegisterAdmin = async () => Config.AdminRegistration && await User.count({ where: { role: 'admin' } }) === 0;
 
 async function updateAllFeeds(force: boolean = false) {
   broadcastMessage('FEEDS_UPDATE_STARTED', true);
@@ -631,7 +637,7 @@ app
         entry.html = patchReaderContent(entry.html);
       }
       const feed = patchViewFeed((await Feed.findOne({ where: { id: entry.feedId } }))!);
-      return reply.view('entry.njk', { feed, feeds, feedsMap: await getTemplateFeeds(feeds as Feed[]), entry, extHtml });
+      return replyView(req, reply, 'entry.njk', { feed, feeds, feedsMap: await getTemplateFeeds(feeds as Feed[]), entry, extHtml });
     } else {
       return reply.redirect(entry.link!);
     }
@@ -653,48 +659,95 @@ app
   }
 });
 
-if (Config.Development) {
-  app
-  .get('/debug', async (_req, reply) => {
-    return reply.view('debug.njk', { feeds: await indexFeeds(true) });
-  })
-  .post('/debug', async (req, _reply) => {
-    let output;
-    const input = JSON.parse(req.body as string);
-    if (input.action) {
-      let forceUpdateFeed = false;
-      switch (input.action) {
-        case 'force-update-feed':
-          forceUpdateFeed = true;
-        case 'update-feed':
-          input.data
-            ? updateFeed((await findFeedById(input.data))!, true, forceUpdateFeed)
-            : updateAllFeeds(forceUpdateFeed);
-          return "OK";
-      }
-    } else if (input.ini) {
-      const feed = (await getRawFeeds(input.ini))[0];
-      output = feed;
-    } else if (input.feed) {
-      const { parsed, response, error } = await fetchAndParseFeed(input.feed, input.httpBody, true, true);
-      output = { parsed, error, text: response?.data };
+app
+.get('/access', async (req, reply) => {
+  return (await getSession(req)
+    ? reply.redirect('/')
+    : reply.view('access.njk', { adminRegister: await canRegisterAdmin() }));
+})
+.post('/access', async (req: FastifyRequest<{ Body: { /* for: string, */ username: string, password: string, password2?: string, remember?: boolean, action?: string } }>, reply) => {
+  if (req.body.action === 'logout') {
+    return reply
+      .setCookie('Session', '', { path: '/', httpOnly: true, sameSite: 'strict', expires: new Date(0) })
+      .redirect('/');
+  }
+  const adminRegister = await canRegisterAdmin();
+  let error = null;
+  const { username, password, remember } = req.body;
+  let user = await User.findOne({ where: { username } });
+  if (!username || !password || (!user && password !== req.body.password2) || (user && !(await bcrypt.compare(hashString(password, 'sha256'), user.password)))) {
+    error = 'Invalid username or password!';
+  }
+  if (!user && (adminRegister || Config.AllowRegistration)) {
+    const hash = await bcrypt.hash(hashString(password, 'sha256'), await bcrypt.genSalt());
+    user = await User.create({ username, password: hash, ...(adminRegister && { role: 'admin' }) });
+  }
+  if (user && !error) {
+    let cookie = `${username}:${hashString(user.password, 'sha256')}`;
+    if (remember) {
+      cookie += `:${new Date().getTime()}`;
     }
-    return output;
-  })
-  .get('/entry/:entry/markdown', async (req: FastifyRequest<{ Params: { entry: string } }>, reply) => {
-    const entry = await findEntryForView(req.params.entry);
-    if (entry) {
-      return reply
-        .header('X-Robots-Tag', 'noindex')
-        .type('text/markdown')
-        .send(entryToMarkdown(entry));
-    } else {
-      throw NotFoundError();
-    }
-  });
-}
+    return reply
+      .setCookie('Session', cookie, { path: '/', httpOnly: true, sameSite: 'strict', ...(remember && { maxAge: 60 * 60 * 24 * 365 }) })
+      .redirect('/');
+  } else {
+    return reply.view('access.njk', { error, adminRegister });
+  }
+  // return (error
+  //   ? reply.view('access.njk', { error, adminRegister })
+  //   : reply.redirect('/'));
+});
 
-app.post('*', (req, reply) => {
+app
+.get('/debug', async (req, reply) => {
+  if (!await hasSpecialFeatures({ req })) {
+    throw NotFoundError();
+  }
+  return replyView(req, reply, 'debug.njk', { feeds: await indexFeeds(true) });
+})
+.post('/debug', async (req) => {
+  if (!await hasSpecialFeatures({ req })) {
+    throw NotFoundError();
+  }
+  let output;
+  const input = JSON.parse(req.body as string);
+  if (input.action) {
+    let forceUpdateFeed = false;
+    switch (input.action) {
+      case 'force-update-feed':
+        forceUpdateFeed = true;
+      case 'update-feed':
+        input.data
+          ? updateFeed((await findFeedById(input.data))!, true, forceUpdateFeed)
+          : updateAllFeeds(forceUpdateFeed);
+        return "OK";
+    }
+  } else if (input.ini) {
+    const feed = (await getRawFeeds(input.ini))[0];
+    output = feed;
+  } else if (input.feed) {
+    const { parsed, response, error } = await fetchAndParseFeed(input.feed, input.httpBody, true, true);
+    output = { parsed, error, text: response?.data };
+  }
+  return output;
+})
+.get('/entry/:entry/markdown', async (req: FastifyRequest<{ Params: { entry: string } }>, reply) => {
+  if (!await hasSpecialFeatures({ req })) {
+    throw NotFoundError();
+  }
+  const entry = await findEntryForView(req.params.entry);
+  if (entry) {
+    return reply
+      .header('X-Robots-Tag', 'noindex')
+      .type('text/markdown')
+      .send(entryToMarkdown(entry));
+  } else {
+    throw NotFoundError();
+  }
+});
+
+app
+.post('*', (req, reply) => {
   const { action, dkey, dvalue } = req.body as { action: string; dkey: string; dvalue: string; };
   if (action === 'set-prefs') {
     const prefs = getPrefs(req, false) as any;

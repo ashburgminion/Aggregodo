@@ -1,9 +1,10 @@
 {%- extends "base.njk" -%}
 {%- block section -%}Entry{%- endblock -%}
 {%- block title -%}{{ entry.title }} | Entry{%- endblock -%}
+{%- block tabitems -%}{%- endblock -%}
 {%- block menuitems -%}
   <li><a class="mdl-menu__item" href="?external-html={{ (extHtml - 1) * -1 }}" rel="nofollow">Switch Content</a></li>
-  {% if Config.Development %}
+  {% if hasSpecialFeatures %}
     <li><a class="mdl-menu__item" href="{{ urlFor('/entry/:entry/markdown', { entry: slugifyUrl(entry.link) }) }}" rel="nofollow">View Markdown</a></li>
   {% endif %}
 {%- endblock -%}

@@ -18,6 +18,7 @@
   {%- if prefs.DefaultView == 'list' -%} list-layout {%- endif -%}
   {%- if prefs.DefaultView == 'flow' -%} flow-layout {%- endif -%}
 {%- endblock -%}
+{%- block tabitems -%}{%- endblock -%}
 {%- block menuitems -%}
   <li><button class="mdl-menu__item" onclick="copyToClipboard(location.origin + (location.pathname.endsWith('/') ? location.pathname.slice(0, -1) : location.pathname) + '/atom'  + location.search);">Copy Bridge URL (Atom)</button></li>
   <li><form method="POST">
@@ -29,7 +30,7 @@
       Use Reader Mode
     </button>
   </form></li>
-  {% if Config.Development %}
+  {% if hasSpecialFeatures %}
     {% if feed %}
       <li><button class="mdl-menu__item" onclick="debugRequest('update-feed', {{ feed.id }});">Update Feed</button></li>
       <li><button class="mdl-menu__item" onclick="debugRequest('force-update-feed', {{ feed.id }});">Force Update Feed</button></li>
@@ -117,13 +118,7 @@
         {% endif %}
       class="mdl-card mdl-shadow--2dp rss-card mdl-cell">
         <div class="rss-card-image">
-          {% if entry.embed %}
-            <iframe {% if entry.image %} style="background-image: url('{{ entry.image }}');" {% endif %} src="{{ entry.embed }}" loading="lazy" allow="fullscreen" allowfullscreen></iframe>
-          {% elif entry.video %}
-            <video src="{{ entry.video }}" controls></video>
-          {% elif entry.image %}
-            <img src="{{ entry.image }}" loading="lazy" />
-          {% endif %}
+          {% include 'parts/entry-media.njk' %}
         </div>
         <div class="rss-card-content">
           <div class="rss-card-title">{{ entry.title }}</div>
@@ -173,13 +168,7 @@
         {% endif %}
       class="mdl-card mdl-shadow--2dp rss-card mdl-cell mdl-cell--8-col">
         <div class="rss-card-image">
-          {% if entry.embed %}
-            <iframe {% if entry.image %} style="background-image: url('{{ entry.image }}');" {% endif %} src="{{ entry.embed }}" loading="lazy" allow="fullscreen" allowfullscreen></iframe>
-          {% elif entry.video %}
-            <video src="{{ entry.video }}" controls></video>
-          {% elif entry.image %}
-            <img src="{{ entry.image }}" loading="lazy" />
-          {% endif %}
+          {% include 'parts/entry-media.njk' %}
         </div>
         {% if entry.title or entry.summary %}
           <div class="rss-card-content">
@@ -244,7 +233,7 @@
       setViewLayout(defaultView);
     }
 
-    {% if Config.Development %}
+    {% if hasSpecialFeatures %}
       async function debugRequest(action, data) {
         const response = await fetch('/debug', { method: "POST", body: JSON.stringify({ action, data }) });
         alert(`${response.status}: ${await response.text()}`);

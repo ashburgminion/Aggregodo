@@ -1,9 +1,9 @@
 class IniError extends Error {}
 
 // TODO: support logging errors and returning them, without throwing?
-export function parseIni(ini: string, strict: boolean = false): Record<string, string|Record<string, string>> {
-  const main: Record<string, string> = {};
-  const extra: Record<string, Record<string, string>> = {};
+export function parseIni(ini: string, strict: boolean = false): Record<string, string|Record<string, string|null>|null> {
+  const main: Record<string, string|null> = {};
+  const extra: Record<string, Record<string, string|null>> = {};
   let section = null;
   let lineIndex = 0;
   let key: string|null = null;
@@ -12,7 +12,7 @@ export function parseIni(ini: string, strict: boolean = false): Record<string, s
     lineIndex++;
     if (line == line.trimStart()) {
       // no indentation: new property
-      if (key && value) {
+      if (key) {
         // save accumulated property before a new one
         (section ? extra[section] : main)[key] = value;
         key = value = null;
@@ -35,8 +35,8 @@ export function parseIni(ini: string, strict: boolean = false): Record<string, s
       }
     } else {
       // indented: continue multiline property if exists
-      if (key && value) {
-        value = value + '\n' + line.trim();
+      if (key) {
+        value = (value || '') + '\n' + line.trim();
       } else if (strict) {
         throw new IniError('Indented line follows no property @ line' + lineIndex);
       }
@@ -57,18 +57,19 @@ export function parseIni(ini: string, strict: boolean = false): Record<string, s
 
 export function dumpIni(data: Record<string, string|Record<string, string>>): string {
   // TODO: sort unsectioned props to be handled before sections
-  // TODO: handle multiline values properly
   let out = '';
   for (const key in data) {
     const value = data[key];
     if (typeof value === 'object') {
       out += `\n[${key}]\n`
       for (const key in value) {
-        out += `${key} = ${value[key]}\n`;
+        out += `${key} = ${formatOutputValue(value[key])}\n`;
       }
     } else {
-      out += `${key} = ${value}\n`;
+      out += `${key} = ${formatOutputValue(value)}\n`;
     }
   }
   return out;
 }
+
+const formatOutputValue = (value: string) => value.split(/\r?\n/).map((line, index) => (index ? '\t' : '') + line).join('\n');

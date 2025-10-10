@@ -11,6 +11,8 @@ export const Config = (() => {
   const updateInterval = parseInt(user.Update_Interval);
   return {
     Development: parseBool(user.Development) ?? parseBool(base.Development) ?? false,
+    AdminRegistration: parseBool(user.Enable_Admin_Registration) ?? parseBool(base.Enable_Admin_Registration),
+    AllowRegistration: parseBool(user.Allow_User_Registration) ?? parseBool(base.Allow_User_Registration),
     LogFile: user.Log_File || base.Log_File,
     Http: {
       Port: !isNaN(httpPort) ? httpPort : parseInt(base.HTTP_Port),

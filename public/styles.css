@@ -59,7 +59,7 @@ html, body {
             -ms-flex-pack: end;
           justify-content: flex-end;
   padding: 16px;
-  height: 151px;
+  min-height: 151px;
 }
 .demo-avatar-dropdown {
   display: -webkit-flex;
@@ -755,6 +755,7 @@ body.flow-layout #flow-layout {
 details > summary {
   cursor: pointer;
 }
-/* details > *:not(summary) {
-  cursor: initial;
-} */
+
+.mdl-layout__tab-bar-container > * {
+  background-color: #F5F5F5;
+}

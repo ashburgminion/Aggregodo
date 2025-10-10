@@ -1,0 +1,63 @@
+{%- extends "base.njk" -%}
+{%- block title -%}Login or Signup{%- endblock -%}
+{%- block section -%}Login or Signup{%- endblock -%}
+{%- block tabitems -%}
+  <a href="#login" class="mdl-layout__tab">Login</a>
+  {% if adminRegister or Config.AllowRegistration %}
+    <a href="#register" class="mdl-layout__tab">Register</a>
+  {% endif %}
+{%- endblock -%}
+{%- block menuitems -%}{%- endblock -%}
+{%- block canonical -%}{%- endblock -%}
+{%- block content -%}
+  <div class="mdl-grid">
+    {% if error %}
+      <blockquote>{{ error }}</blockquote>
+    {% endif %}
+    <form method="POST" style="width: 100%;" class="mdl-cell">
+      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width: 100%;">
+        <input class="mdl-textfield__input" type="text" id="username" name="username" style="width: 100%;" required>
+        <label class="mdl-textfield__label" for="username">Username</label>
+      </div>
+      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width: 100%;">
+        <input class="mdl-textfield__input" type="password" id="password" name="password" style="width: 100%;" required>
+        <label class="mdl-textfield__label" for="password">Password</label>
+      </div>
+      {% if adminRegister or Config.AllowRegistration %}
+        <div class="register">
+          <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width: 100%;">
+            <input class="mdl-textfield__input" type="password" id="password2" name="password2" style="width: 100%;">
+            <label class="mdl-textfield__label" for="password2">Confirm Password</label>
+          </div>
+          {% if adminRegister %}
+            <p>Your account will be created as admin.</p>
+          {% endif %}
+        </div>
+      {% endif %}
+      <div class="mdl-grid">
+        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="remember">
+          <input type="checkbox" id="remember" name="remember" class="mdl-checkbox__input" checked>
+          <span class="mdl-checkbox__label">Remember Me</span>
+        </label>
+      </div>
+      <div class="mdl-grid">
+        <button class="mdl-button mdl-js-button mdl-button--raised" type="submit">Continue</button>
+      </div>
+    </form>
+  </div>
+  <script>
+    const tabButtons = document.querySelectorAll('a[href].mdl-layout__tab');
+    tabButtons.forEach(el => el.addEventListener('click', ev => {
+      ev.preventDefault();
+      const target = el.href.split('#')[1];
+      tabButtons.forEach(el => {
+        const name = el.href.split('#')[1];
+        Array.from(document.getElementsByClassName(name)).forEach(el => el.hidden = name !== target);
+      });
+    }));
+
+    const target = document.querySelector({{ adminRegister }} ? 'a[href="#register"]' : 'a[href="#login"]');
+    target.click();
+    target.classList.add('is-active');
+  </script>
+{%- endblock -%}
